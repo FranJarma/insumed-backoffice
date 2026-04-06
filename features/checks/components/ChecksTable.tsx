@@ -108,14 +108,14 @@ export function ChecksTable({ checks }: ChecksTableProps) {
         </select>
 
         {/* Mes */}
-        <div className="flex items-center gap-1 rounded-md border bg-card px-1">
-          <button onClick={() => handleMonthNav("prev")} className="rounded p-1 hover:bg-muted">
+        <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
+          <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="min-w-[110px] text-center text-sm font-medium">
             {monthLabel(effectiveMonth)}
           </span>
-          <button onClick={() => handleMonthNav("next")} className="rounded p-1 hover:bg-muted">
+          <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -142,8 +142,32 @@ export function ChecksTable({ checks }: ChecksTableProps) {
           No hay cheques para el período seleccionado.
         </div>
       ) : (
-        <div className="rounded-md border bg-card">
-          <Table>
+        <>
+          {/* Resumen de totales */}
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border bg-card px-4 py-3">
+            <div className="flex flex-wrap items-center gap-6">
+              {typeFilter !== "EMITIDO" && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Total Recibidos</span>
+                  <span className="text-sm font-semibold text-green-700">{formatCurrency(totalRecibidos)}</span>
+                </div>
+              )}
+              {typeFilter !== "RECIBIDO" && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Total Emitidos</span>
+                  <span className="text-sm font-semibold text-red-700">{formatCurrency(totalEmitidos)}</span>
+                </div>
+              )}
+            </div>
+            {typeFilter === "ALL" && (
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-muted-foreground">Balance neto</span>
+                <span className="text-base font-bold">{formatCurrency(totalRecibidos - totalEmitidos)}</span>
+              </div>
+            )}
+          </div>
+          <div className="rounded-md border bg-card">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Tipo</TableHead>
@@ -251,43 +275,10 @@ export function ChecksTable({ checks }: ChecksTableProps) {
                 </TableRow>
               ))}
 
-              {/* Filas de totales */}
-              {typeFilter !== "EMITIDO" && (
-                <TableRow className="border-t bg-muted/20">
-                  <TableCell colSpan={7} className="text-right text-xs text-muted-foreground">
-                    Total Recibidos
-                  </TableCell>
-                  <TableCell className="text-right text-sm font-medium text-green-700">
-                    {formatCurrency(totalRecibidos)}
-                  </TableCell>
-                  <TableCell colSpan={3} />
-                </TableRow>
-              )}
-              {typeFilter !== "RECIBIDO" && (
-                <TableRow className={typeFilter !== "EMITIDO" ? "bg-muted/20" : "border-t bg-muted/20"}>
-                  <TableCell colSpan={7} className="text-right text-xs text-muted-foreground">
-                    Total Emitidos
-                  </TableCell>
-                  <TableCell className="text-right text-sm font-medium text-red-700">
-                    {formatCurrency(totalEmitidos)}
-                  </TableCell>
-                  <TableCell colSpan={3} />
-                </TableRow>
-              )}
-              {typeFilter === "ALL" && (
-                <TableRow className="border-t-2 bg-muted/40 font-semibold">
-                  <TableCell colSpan={7} className="text-right text-sm text-muted-foreground">
-                    Balance neto
-                  </TableCell>
-                  <TableCell className="text-right text-base">
-                    {formatCurrency(totalRecibidos - totalEmitidos)}
-                  </TableCell>
-                  <TableCell colSpan={3} />
-                </TableRow>
-              )}
             </TableBody>
-          </Table>
-        </div>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );

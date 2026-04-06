@@ -61,6 +61,7 @@ export function SalesTable({ sales }: SalesTableProps) {
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [selectedClient, setSelectedClient] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState<"all" | "PENDING" | "PAID" | "CANCELLED">("all");
+  const [selectedInvoiceType, setSelectedInvoiceType] = useState<"all" | "A" | "B">("all");
 
   const effectiveMonth = `${selectedYear}-${selectedMonth.slice(5)}`;
 
@@ -75,9 +76,10 @@ export function SalesTable({ sales }: SalesTableProps) {
         const matchMonth = s.date.startsWith(effectiveMonth);
         const matchClient = selectedClient === "all" || s.clientName === selectedClient;
         const matchStatus = selectedStatus === "all" || s.status === selectedStatus;
-        return matchMonth && matchClient && matchStatus;
+        const matchInvoiceType = selectedInvoiceType === "all" || s.invoiceType === selectedInvoiceType;
+        return matchMonth && matchClient && matchStatus && matchInvoiceType;
       }),
-    [sales, effectiveMonth, selectedClient, selectedStatus]
+    [sales, effectiveMonth, selectedClient, selectedStatus, selectedInvoiceType]
   );
 
   const totalPaid = useMemo(
@@ -126,14 +128,14 @@ export function SalesTable({ sales }: SalesTableProps) {
         </select>
 
         {/* Mes */}
-        <div className="flex items-center gap-1 rounded-md border bg-card px-1">
-          <button onClick={() => handleMonthNav("prev")} className="rounded p-1 hover:bg-muted">
+        <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
+          <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="min-w-[110px] text-center text-sm font-medium">
             {monthLabel(effectiveMonth)}
           </span>
-          <button onClick={() => handleMonthNav("next")} className="rounded p-1 hover:bg-muted">
+          <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -148,6 +150,17 @@ export function SalesTable({ sales }: SalesTableProps) {
           {clientNames.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
+        </select>
+
+        {/* Tipo de factura */}
+        <select
+          value={selectedInvoiceType}
+          onChange={(e) => setSelectedInvoiceType(e.target.value as "all" | "A" | "B")}
+          className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="all">Todos los tipos</option>
+          <option value="A">Factura A</option>
+          <option value="B">Factura B</option>
         </select>
 
         {/* Estado */}
@@ -194,8 +207,26 @@ export function SalesTable({ sales }: SalesTableProps) {
           No hay ventas para el período seleccionado.
         </div>
       ) : (
-        <div className="rounded-md border bg-card">
-          <Table>
+        <div className="space-y-4">
+          {/* Resumen de totales */}
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border bg-card px-4 py-3">
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Cobrado</span>
+                <span className="text-sm font-semibold text-green-700">{formatCurrency(totalPaid)}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">A Cobrar</span>
+                <span className="text-sm font-semibold text-orange-700">{formatCurrency(totalPending)}</span>
+              </div>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-xs text-muted-foreground">Total del mes</span>
+              <span className="text-base font-bold">{formatCurrency(total)}</span>
+            </div>
+          </div>
+          <div className="rounded-md border bg-card">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Cliente</TableHead>
@@ -279,34 +310,9 @@ export function SalesTable({ sales }: SalesTableProps) {
                 </TableRow>
               ))}
 
-              {/* Filas de totales */}
-              <TableRow className="border-t bg-muted/20">
-                <TableCell colSpan={6} className="text-right text-xs text-muted-foreground">
-                  Subtotal Cobrado
-                </TableCell>
-                <TableCell className="text-right text-sm font-medium text-green-700">
-                  {formatCurrency(totalPaid)}
-                </TableCell>
-                <TableCell colSpan={2} />
-              </TableRow>
-              <TableRow className="bg-muted/20">
-                <TableCell colSpan={6} className="text-right text-xs text-muted-foreground">
-                  Subtotal A Cobrar
-                </TableCell>
-                <TableCell className="text-right text-sm font-medium text-orange-700">
-                  {formatCurrency(totalPending)}
-                </TableCell>
-                <TableCell colSpan={2} />
-              </TableRow>
-              <TableRow className="border-t-2 bg-muted/40 font-semibold">
-                <TableCell colSpan={6} className="text-right text-sm text-muted-foreground">
-                  Total del mes
-                </TableCell>
-                <TableCell className="text-right text-base">{formatCurrency(total)}</TableCell>
-                <TableCell colSpan={2} />
-              </TableRow>
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </div>
       )}
 

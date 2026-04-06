@@ -127,14 +127,14 @@ export function PurchasesTable({ purchases }: PurchasesTableProps) {
         </select>
 
         {/* Mes */}
-        <div className="flex items-center gap-1 rounded-md border bg-card px-1">
-          <button onClick={() => handleMonthNav("prev")} className="rounded p-1 hover:bg-muted">
+        <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
+          <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="min-w-[110px] text-center text-sm font-medium">
             {monthLabel(effectiveMonth)}
           </span>
-          <button onClick={() => handleMonthNav("next")} className="rounded p-1 hover:bg-muted">
+          <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -192,8 +192,26 @@ export function PurchasesTable({ purchases }: PurchasesTableProps) {
           No hay compras para el período seleccionado.
         </div>
       ) : (
-        <div className="rounded-md border bg-card">
-          <Table>
+        <>
+          {/* Resumen de totales */}
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border bg-card px-4 py-3">
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Pagado</span>
+                <span className="text-sm font-semibold text-green-700">{formatCurrency(totalPaid)}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Pendiente</span>
+                <span className="text-sm font-semibold text-orange-700">{formatCurrency(totalPending)}</span>
+              </div>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-xs text-muted-foreground">Total del mes</span>
+              <span className="text-base font-bold">{formatCurrency(total)}</span>
+            </div>
+          </div>
+          <div className="rounded-md border bg-card">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Proveedor</TableHead>
@@ -250,35 +268,10 @@ export function PurchasesTable({ purchases }: PurchasesTableProps) {
                 </TableRow>
               ))}
 
-              {/* Filas de totales */}
-              <TableRow className="border-t bg-muted/20">
-                <TableCell colSpan={5} className="text-right text-xs text-muted-foreground">
-                  Subtotal Pagado
-                </TableCell>
-                <TableCell className="text-right text-sm font-medium text-green-700">
-                  {formatCurrency(totalPaid)}
-                </TableCell>
-                <TableCell colSpan={2} />
-              </TableRow>
-              <TableRow className="bg-muted/20">
-                <TableCell colSpan={5} className="text-right text-xs text-muted-foreground">
-                  Subtotal Pendiente
-                </TableCell>
-                <TableCell className="text-right text-sm font-medium text-orange-700">
-                  {formatCurrency(totalPending)}
-                </TableCell>
-                <TableCell colSpan={2} />
-              </TableRow>
-              <TableRow className="border-t-2 bg-muted/40 font-semibold">
-                <TableCell colSpan={5} className="text-right text-sm text-muted-foreground">
-                  Total del mes
-                </TableCell>
-                <TableCell className="text-right text-base">{formatCurrency(total)}</TableCell>
-                <TableCell colSpan={2} />
-              </TableRow>
             </TableBody>
-          </Table>
-        </div>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );

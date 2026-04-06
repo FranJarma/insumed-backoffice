@@ -6,7 +6,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Insumed",
+  title: "Insumed - Sistema de gestión de ventas e insumos médicos",
   description: "Sistema de gestión de ventas e insumos médicos",
   icons: {
     icon: "/favicon.ico",
