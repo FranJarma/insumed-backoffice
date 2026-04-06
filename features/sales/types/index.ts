@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Sale, Client } from "@/db/schema";
 
 export const createSaleSchema = z.object({
-  clientId: z.string().uuid("Seleccione un cliente válido"),
+  clientId: z.string().min(1, "Seleccione un cliente válido"),
   invoiceType: z.enum(["A", "B"]).default("A"),
   invoiceNumber: z.string().min(1, "El número de factura es requerido"),
   date: z.string().min(1, "La fecha es requerida"),

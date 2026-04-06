@@ -20,8 +20,11 @@ import { createSaleSchema, type CreateSaleInput } from "../types";
 import type { Client } from "@/db/schema";
 import { ClientAutocomplete } from "./ClientAutocomplete";
 
+type PatientOption = { id: string; name: string; clientId: string };
+
 interface CreateSaleDialogProps {
   clients: Client[];
+  patients: PatientOption[];
 }
 
 const INVOICE_TYPES = [
@@ -29,7 +32,7 @@ const INVOICE_TYPES = [
   { value: "B", label: "Factura B" },
 ] as const;
 
-export function CreateSaleDialog({ clients }: CreateSaleDialogProps) {
+export function CreateSaleDialog({ clients, patients }: CreateSaleDialogProps) {
   const [open, setOpen] = useState(false);
   const [invoiceDataUrl, setInvoiceDataUrl] = useState<string | undefined>();
   const [invoicePhotoError, setInvoicePhotoError] = useState<string | undefined>();
@@ -176,7 +179,23 @@ export function CreateSaleDialog({ clients }: CreateSaleDialogProps) {
               <Label htmlFor="patient">
                 Paciente <span className="text-muted-foreground text-xs">(opcional)</span>
               </Label>
-              <Input id="patient" {...register("patient")} placeholder="García, Juan" />
+              <select
+                id="patient"
+                {...register("patient")}
+                disabled={!clientId}
+                className="w-full rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">
+                  {clientId ? "Seleccionar paciente..." : "Seleccione un cliente primero"}
+                </option>
+                {patients
+                  .filter((p) => p.clientId === clientId)
+                  .map((p) => (
+                    <option key={p.id} value={p.name}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
             </div>
           </div>
 

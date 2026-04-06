@@ -17,6 +17,13 @@ export type MockClient = {
   createdAt: Date;
 };
 
+export type MockPatient = {
+  id: string;
+  name: string;
+  clientId: string;
+  createdAt: Date;
+};
+
 export type MockProvider = {
   id: string;
   name: string;
@@ -77,6 +84,7 @@ type Store = {
   banks: MockBank[];
   clients: MockClient[];
   providers: MockProvider[];
+  patients: MockPatient[];
   sales: MockSale[];
   purchases: MockPurchase[];
   checks: MockCheck[];
@@ -132,6 +140,30 @@ function initStore(): Store {
     { id: "p2", name: "Insumos del Sur SRL", cuit: "30-68901234-5", phone: "011-4567-8901", email: "info@insumosdelsur.com.ar", address: "Av. Rivadavia 5678, CABA", createdAt: new Date("2024-01-01") },
     { id: "p3", name: "MedSupply Argentina", cuit: "30-70345678-9", phone: "0341-456-7890", email: "contacto@medsupply.com.ar", address: "San Martín 890, Rosario", createdAt: new Date("2024-02-01") },
     { id: "p4", name: "Laboratorios Norte SA", cuit: "30-65432100-3", phone: "0351-234-5678", email: "pedidos@labnorte.com.ar", address: "Colón 456, Córdoba", createdAt: new Date("2024-02-01") },
+  ];
+
+  const patients: MockPatient[] = [
+    // OSDE (c1)
+    { id: "pt1", name: "García, Juan Carlos", clientId: "c1", createdAt: new Date("2024-01-01") },
+    { id: "pt2", name: "Torres, Marta", clientId: "c1", createdAt: new Date("2024-01-01") },
+    { id: "pt3", name: "Herrera, Diego", clientId: "c1", createdAt: new Date("2024-01-01") },
+    { id: "pt4", name: "Martínez, Pedro", clientId: "c1", createdAt: new Date("2024-01-01") },
+    // Swiss Medical (c2)
+    { id: "pt5", name: "López, María Elena", clientId: "c2", createdAt: new Date("2024-01-01") },
+    { id: "pt6", name: "Díaz, Roberto", clientId: "c2", createdAt: new Date("2024-01-01") },
+    { id: "pt7", name: "Jiménez, Lucía", clientId: "c2", createdAt: new Date("2024-01-01") },
+    // Galeno (c3)
+    { id: "pt8", name: "Rodríguez, Carlos", clientId: "c3", createdAt: new Date("2024-01-01") },
+    { id: "pt9", name: "Sánchez, Carlos", clientId: "c3", createdAt: new Date("2024-01-01") },
+    { id: "pt10", name: "Álvarez, Claudia", clientId: "c3", createdAt: new Date("2024-01-01") },
+    // Medicus (c4)
+    { id: "pt11", name: "Fernández, Ana", clientId: "c4", createdAt: new Date("2024-01-01") },
+    { id: "pt12", name: "Ruiz, Sergio", clientId: "c4", createdAt: new Date("2024-01-01") },
+    { id: "pt13", name: "Vargas, Eduardo", clientId: "c4", createdAt: new Date("2024-01-01") },
+    // OMINT (c5)
+    { id: "pt14", name: "González, Laura", clientId: "c5", createdAt: new Date("2024-01-01") },
+    { id: "pt15", name: "Moreno, Patricia", clientId: "c5", createdAt: new Date("2024-01-01") },
+    { id: "pt16", name: "Castro, Valeria", clientId: "c5", createdAt: new Date("2024-01-01") },
   ];
 
   const sales: MockSale[] = [
@@ -201,7 +233,7 @@ function initStore(): Store {
     { id: "ch10", type: "EMITIDO", number: "22334455", bank: "Banco Ciudad", amount: "94000.00", issueDate: thisMonth(5), dueDate: thisMonth(30), paymentDate: null, status: "PENDIENTE", relatedEntity: "Laboratorios Norte SA", notes: "Pago FC-B-10009", photoUrl: null, createdAt: new Date() },
   ];
 
-  return { banks, clients, providers, sales, purchases, checks };
+  return { banks, clients, providers, patients, sales, purchases, checks };
 }
 
 if (!global.__mockStore_v3) {
@@ -212,6 +244,7 @@ if (!global.__mockStore_v3) {
   if (!global.__mockStore_v3.banks) global.__mockStore_v3.banks = s.banks;
   if (!global.__mockStore_v3.providers) global.__mockStore_v3.providers = s.providers;
   if (!global.__mockStore_v3.checks) global.__mockStore_v3.checks = s.checks;
+  if (!global.__mockStore_v3.patients) global.__mockStore_v3.patients = s.patients;
   // Add paymentMethod to any purchases that are missing it
   for (const p of global.__mockStore_v3.purchases) {
     if (!("paymentMethod" in p)) (p as MockPurchase).paymentMethod = null;
@@ -233,6 +266,25 @@ if (!global.__mockStore_v3) {
 }
 
 export const store = global.__mockStore_v3!;
+
+// ─── Patients ─────────────────────────────────────────────────────────────────
+
+export function mockGetPatients(): MockPatient[] {
+  return [...store.patients].sort((a, b) => a.name.localeCompare(b.name));
+}
+export function mockGetPatientsWithClient() {
+  return [...store.patients]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((p) => ({
+      ...p,
+      clientName: store.clients.find((c) => c.id === p.clientId)?.name ?? null,
+    }));
+}
+export function mockCreatePatient(data: { name: string; clientId: string }): MockPatient {
+  const newPatient: MockPatient = { id: crypto.randomUUID(), ...data, createdAt: new Date() };
+  store.patients.push(newPatient);
+  return newPatient;
+}
 
 // ─── Banks ────────────────────────────────────────────────────────────────────
 

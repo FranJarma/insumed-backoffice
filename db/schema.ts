@@ -48,6 +48,15 @@ export const providers = pgTable("providers", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const patients = pgTable("patients", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  clientId: uuid("client_id")
+    .references(() => clients.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const sales = pgTable("sales", {
   id: uuid("id").primaryKey().defaultRandom(),
   clientId: uuid("client_id")
@@ -100,6 +109,14 @@ export const checks = pgTable("checks", {
 
 export const clientsRelations = relations(clients, ({ many }) => ({
   sales: many(sales),
+  patients: many(patients),
+}));
+
+export const patientsRelations = relations(patients, ({ one }) => ({
+  client: one(clients, {
+    fields: [patients.clientId],
+    references: [clients.id],
+  }),
 }));
 
 export const salesRelations = relations(sales, ({ one }) => ({
@@ -117,6 +134,8 @@ export type Client = typeof clients.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
 export type Provider = typeof providers.$inferSelect;
 export type NewProvider = typeof providers.$inferInsert;
+export type Patient = typeof patients.$inferSelect;
+export type NewPatient = typeof patients.$inferInsert;
 export type Sale = typeof sales.$inferSelect;
 export type NewSale = typeof sales.$inferInsert;
 export type Purchase = typeof purchases.$inferSelect;
