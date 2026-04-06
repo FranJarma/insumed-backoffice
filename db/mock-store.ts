@@ -1,0 +1,431 @@
+/**
+ * In-memory mock store for development without a real database.
+ * Uses Node.js global to persist data across Next.js hot reloads.
+ * Activate by setting USE_MOCK_DATA=true in .env.local
+ */
+
+export type MockBank = {
+  id: string;
+  name: string;
+  createdAt: Date;
+};
+
+export type MockClient = {
+  id: string;
+  name: string;
+  cuit: string;
+  createdAt: Date;
+};
+
+export type MockProvider = {
+  id: string;
+  name: string;
+  cuit: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  createdAt: Date;
+};
+
+export type MockSale = {
+  id: string;
+  clientId: string;
+  invoiceType: "A" | "B";
+  invoiceNumber: string;
+  date: string;
+  oc: string | null;
+  patient: string | null;
+  amount: string;
+  status: "PENDING" | "PAID" | "CANCELLED";
+  documentUrl: string | null; // BASE64 foto de la factura
+  creditNoteNumber: string | null;
+  creditNoteUrl: string | null;
+  createdAt: Date;
+};
+
+export type MockPurchase = {
+  id: string;
+  provider: string;
+  invoiceNumber: string;
+  date: string;
+  amount: string;
+  status: "PENDING" | "PAID";
+  paymentMethod: string | null;
+  remito: string | null;
+  remitoUrl: string | null;
+  category: "PROVEEDOR" | "VARIOS";
+  createdAt: Date;
+};
+
+export type MockCheck = {
+  id: string;
+  type: "EMITIDO" | "RECIBIDO";
+  number: string;
+  bank: string;
+  amount: string;
+  issueDate: string;
+  dueDate: string;
+  paymentDate: string | null; // Fecha de pago (EMITIDO) / cobro (RECIBIDO)
+  status: "PENDIENTE" | "DEPOSITADO" | "COBRADO" | "RECHAZADO";
+  relatedEntity: string | null;
+  notes: string | null;
+  photoUrl: string | null;
+  createdAt: Date;
+};
+
+type Store = {
+  banks: MockBank[];
+  clients: MockClient[];
+  providers: MockProvider[];
+  sales: MockSale[];
+  purchases: MockPurchase[];
+  checks: MockCheck[];
+};
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __mockStore_v3: Store | undefined;
+}
+
+function d(offsetDays = 0): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays)
+    .toISOString()
+    .split("T")[0];
+}
+function lastMonth(day: number): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() - 1, day)
+    .toISOString()
+    .split("T")[0];
+}
+function thisMonth(day: number): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), day)
+    .toISOString()
+    .split("T")[0];
+}
+
+function initStore(): Store {
+  const banks: MockBank[] = [
+    { id: "bk1", name: "Banco de la Nación Argentina (BNA)", createdAt: new Date("2024-01-01") },
+    { id: "bk2", name: "Banco Macro", createdAt: new Date("2024-01-01") },
+    { id: "bk3", name: "Supervielle", createdAt: new Date("2024-01-01") },
+    { id: "bk4", name: "Banco Galicia", createdAt: new Date("2024-01-01") },
+    { id: "bk5", name: "BBVA Argentina", createdAt: new Date("2024-01-01") },
+    { id: "bk6", name: "Santander Argentina", createdAt: new Date("2024-01-01") },
+    { id: "bk7", name: "HSBC Argentina", createdAt: new Date("2024-01-01") },
+    { id: "bk8", name: "Banco Ciudad", createdAt: new Date("2024-01-01") },
+    { id: "bk9", name: "Banco Provincia", createdAt: new Date("2024-01-01") },
+  ];
+
+  const clients: MockClient[] = [
+    { id: "c1", name: "OSDE", cuit: "30-54563559-6", createdAt: new Date("2024-01-01") },
+    { id: "c2", name: "Swiss Medical Group", cuit: "30-67726579-3", createdAt: new Date("2024-01-01") },
+    { id: "c3", name: "Galeno Argentina", cuit: "30-68539351-5", createdAt: new Date("2024-01-01") },
+    { id: "c4", name: "Medicus", cuit: "30-52081635-8", createdAt: new Date("2024-01-01") },
+    { id: "c5", name: "OMINT", cuit: "30-52022338-4", createdAt: new Date("2024-01-01") },
+  ];
+
+  const providers: MockProvider[] = [
+    { id: "p1", name: "Distribuidora Médica SA", cuit: "30-71234567-1", phone: "011-4321-0000", email: "ventas@distribmed.com.ar", address: "Av. Corrientes 1234, CABA", createdAt: new Date("2024-01-01") },
+    { id: "p2", name: "Insumos del Sur SRL", cuit: "30-68901234-5", phone: "011-4567-8901", email: "info@insumosdelsur.com.ar", address: "Av. Rivadavia 5678, CABA", createdAt: new Date("2024-01-01") },
+    { id: "p3", name: "MedSupply Argentina", cuit: "30-70345678-9", phone: "0341-456-7890", email: "contacto@medsupply.com.ar", address: "San Martín 890, Rosario", createdAt: new Date("2024-02-01") },
+    { id: "p4", name: "Laboratorios Norte SA", cuit: "30-65432100-3", phone: "0351-234-5678", email: "pedidos@labnorte.com.ar", address: "Colón 456, Córdoba", createdAt: new Date("2024-02-01") },
+  ];
+
+  const sales: MockSale[] = [
+    // Mes anterior (marzo)
+    { id: "s1", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00001", date: lastMonth(5), oc: "OC-2025-001", patient: "García, Juan Carlos", amount: "185000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s2", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00002", date: lastMonth(8), oc: "OC-2025-002", patient: "López, María Elena", amount: "97500.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s3", clientId: "c3", invoiceType: "A", invoiceNumber: "FC-A-00003", date: lastMonth(12), oc: "OC-2025-003", patient: "Rodríguez, Carlos", amount: "230000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s4", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00004", date: lastMonth(15), oc: "OC-2025-004", patient: "Fernández, Ana", amount: "75000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s5", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00005", date: lastMonth(20), oc: "OC-2025-005", patient: "Martínez, Pedro", amount: "312000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s6", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00006", date: lastMonth(22), oc: "OC-2025-006", patient: "González, Laura", amount: "145000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s7", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00007", date: lastMonth(28), oc: "OC-2025-007", patient: "Díaz, Roberto", amount: "88000.00", status: "CANCELLED", documentUrl: null, creditNoteNumber: "NC-A-00001", creditNoteUrl: "https://example.com/nc-00001.pdf", createdAt: new Date() },
+    // Mes actual (abril)
+    { id: "s8", clientId: "c3", invoiceType: "A", invoiceNumber: "FC-A-00008", date: thisMonth(1), oc: "OC-2025-008", patient: "Sánchez, Carlos", amount: "420000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s9", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00009", date: thisMonth(1), oc: "OC-2025-009", patient: "Torres, Marta", amount: "190000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s10", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00010", date: thisMonth(2), oc: "OC-2025-010", patient: "Ruiz, Sergio", amount: "98000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s11", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00011", date: thisMonth(2), oc: "OC-2025-011", patient: "Moreno, Patricia", amount: "321000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s12", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00012", date: thisMonth(3), oc: "OC-2025-012", patient: "Jiménez, Lucía", amount: "167000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s13", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00013", date: thisMonth(5), oc: "OC-2025-013", patient: "Herrera, Diego", amount: "89500.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s14", clientId: "c3", invoiceType: "A", invoiceNumber: "FC-A-00014", date: thisMonth(7), oc: "OC-2025-014", patient: "Álvarez, Claudia", amount: "455000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s15", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00015", date: thisMonth(8), oc: "OC-2025-015", patient: "Vargas, Eduardo", amount: "143000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s16", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00016", date: thisMonth(10), oc: "OC-2025-016", patient: "Castro, Valeria", amount: "275000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+  ];
+
+  const purchases: MockPurchase[] = [
+    // Mes anterior (marzo)
+    { id: "pu1", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10001", date: lastMonth(10), amount: "95000.00", status: "PAID", paymentMethod: "TRANSFERENCIA", remito: "R-10001", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu2", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10002", date: lastMonth(15), amount: "178000.00", status: "PAID", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu3", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10003", date: lastMonth(20), amount: "63000.00", status: "PAID", paymentMethod: "EFECTIVO", remito: "R-10003", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu4", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10004", date: lastMonth(22), amount: "210000.00", status: "PAID", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu5", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10005", date: lastMonth(28), amount: "88000.00", status: "PAID", paymentMethod: "CHEQUE", remito: "R-10005", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    // Mes actual (abril)
+    { id: "pu6", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10006", date: thisMonth(1), amount: "142000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu7", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10007", date: thisMonth(1), amount: "76500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: "R-10007", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu8", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10008", date: thisMonth(2), amount: "218000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu9", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10009", date: thisMonth(2), amount: "94000.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu10", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10010", date: thisMonth(3), amount: "55000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: "R-10010", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu11", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10011", date: thisMonth(5), amount: "187000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu12", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10012", date: thisMonth(7), amount: "63000.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu13", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10013", date: thisMonth(10), amount: "112000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: "R-10013", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu14", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10014", date: thisMonth(11), amount: "340000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu15", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10015", date: thisMonth(12), amount: "89500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu16", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10016", date: thisMonth(14), amount: "156000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: "R-10016", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu17", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10017", date: thisMonth(15), amount: "274000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu18", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10018", date: thisMonth(16), amount: "48500.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu19", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10019", date: thisMonth(17), amount: "193000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu20", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10020", date: thisMonth(18), amount: "67000.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu21", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10021", date: thisMonth(21), amount: "128000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu22", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10022", date: thisMonth(22), amount: "415000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu23", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10023", date: thisMonth(24), amount: "72500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    // Compras Varias
+    { id: "pu24", provider: "Kiosco Don Pedro", invoiceNumber: "TV-001", date: thisMonth(3), amount: "8500.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "VARIOS", createdAt: new Date() },
+    { id: "pu25", provider: "Librería Central", invoiceNumber: "TV-002", date: thisMonth(8), amount: "12300.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "VARIOS", createdAt: new Date() },
+  ];
+
+  const checks: MockCheck[] = [
+    // Con vencimiento en mes anterior
+    { id: "ch1", type: "RECIBIDO", number: "55544433", bank: "BBVA Argentina", amount: "97500.00", issueDate: lastMonth(1), dueDate: lastMonth(20), paymentDate: lastMonth(20), status: "COBRADO", relatedEntity: "Swiss Medical Group", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch2", type: "EMITIDO", number: "99887766", bank: "Santander Argentina", amount: "88000.00", issueDate: lastMonth(10), dueDate: lastMonth(25), paymentDate: lastMonth(25), status: "COBRADO", relatedEntity: "Laboratorios Norte SA", notes: null, photoUrl: null, createdAt: new Date() },
+    // Con vencimiento en mes actual (abril)
+    { id: "ch3", type: "RECIBIDO", number: "12345678", bank: "Banco de la Nación Argentina (BNA)", amount: "185000.00", issueDate: thisMonth(1), dueDate: thisMonth(10), paymentDate: null, status: "DEPOSITADO", relatedEntity: "OSDE", notes: "Depositado en cta. cte.", photoUrl: null, createdAt: new Date() },
+    { id: "ch4", type: "RECIBIDO", number: "98765432", bank: "Banco Galicia", amount: "230000.00", issueDate: thisMonth(1), dueDate: thisMonth(15), paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch5", type: "EMITIDO", number: "11223344", bank: "Banco de la Nación Argentina (BNA)", amount: "178000.00", issueDate: thisMonth(2), dueDate: thisMonth(20), paymentDate: null, status: "PENDIENTE", relatedEntity: "Insumos del Sur SRL", notes: "Pago FC-B-10007", photoUrl: null, createdAt: new Date() },
+    { id: "ch6", type: "RECIBIDO", number: "44556677", bank: "Banco Macro", amount: "142000.00", issueDate: thisMonth(2), dueDate: thisMonth(22), paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch7", type: "EMITIDO", number: "33221100", bank: "Supervielle", amount: "76500.00", issueDate: thisMonth(3), dueDate: thisMonth(25), paymentDate: null, status: "PENDIENTE", relatedEntity: "Distribuidora Médica SA", notes: "Pago FC-B-10006", photoUrl: null, createdAt: new Date() },
+    { id: "ch8", type: "RECIBIDO", number: "77889900", bank: "HSBC Argentina", amount: "321000.00", issueDate: thisMonth(3), dueDate: thisMonth(28), paymentDate: null, status: "DEPOSITADO", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch9", type: "RECIBIDO", number: "66554433", bank: "Banco Provincia", amount: "167000.00", issueDate: lastMonth(28), dueDate: thisMonth(12), paymentDate: null, status: "PENDIENTE", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch10", type: "EMITIDO", number: "22334455", bank: "Banco Ciudad", amount: "94000.00", issueDate: thisMonth(5), dueDate: thisMonth(30), paymentDate: null, status: "PENDIENTE", relatedEntity: "Laboratorios Norte SA", notes: "Pago FC-B-10009", photoUrl: null, createdAt: new Date() },
+  ];
+
+  return { banks, clients, providers, sales, purchases, checks };
+}
+
+if (!global.__mockStore_v3) {
+  global.__mockStore_v3 = initStore();
+} else {
+  // Migrate store if it was initialized before new fields were added
+  const s = initStore();
+  if (!global.__mockStore_v3.banks) global.__mockStore_v3.banks = s.banks;
+  if (!global.__mockStore_v3.providers) global.__mockStore_v3.providers = s.providers;
+  if (!global.__mockStore_v3.checks) global.__mockStore_v3.checks = s.checks;
+  // Add paymentMethod to any purchases that are missing it
+  for (const p of global.__mockStore_v3.purchases) {
+    if (!("paymentMethod" in p)) (p as MockPurchase).paymentMethod = null;
+    if (!("remito" in p)) (p as MockPurchase).remito = null;
+    if (!("remitoUrl" in p)) (p as MockPurchase).remitoUrl = null;
+    if (!("category" in p)) (p as MockPurchase).category = "PROVEEDOR";
+  }
+  // Add invoiceType to any sales that are missing it
+  for (const s of global.__mockStore_v3.sales) {
+    if (!("invoiceType" in s)) (s as MockSale).invoiceType = "A";
+  }
+  // Add photoUrl / paymentDate to any checks that are missing them
+  for (const c of global.__mockStore_v3.checks) {
+    if (!("photoUrl" in c)) (c as MockCheck).photoUrl = null;
+    if (!("paymentDate" in c)) (c as MockCheck).paymentDate = null;
+  }
+}
+
+export const store = global.__mockStore_v3!;
+
+// ─── Banks ────────────────────────────────────────────────────────────────────
+
+export function mockGetBanks(): MockBank[] {
+  return [...store.banks].sort((a, b) => a.name.localeCompare(b.name));
+}
+export function mockCreateBank(data: { name: string }) {
+  store.banks.push({ id: crypto.randomUUID(), name: data.name, createdAt: new Date() });
+}
+
+// ─── Clients ──────────────────────────────────────────────────────────────────
+
+export function mockGetClients(): MockClient[] {
+  return [...store.clients].sort((a, b) => a.name.localeCompare(b.name));
+}
+export function mockCreateClient(data: { name: string; cuit: string }): MockClient {
+  const newClient: MockClient = { id: crypto.randomUUID(), ...data, createdAt: new Date() };
+  store.clients.push(newClient);
+  return newClient;
+}
+
+// ─── Providers ───────────────────────────────────────────────────────────────
+
+export function mockGetProviders(): MockProvider[] {
+  return [...store.providers].sort((a, b) => a.name.localeCompare(b.name));
+}
+export function mockCreateProvider(data: {
+  name: string;
+  cuit?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}) {
+  store.providers.push({
+    id: crypto.randomUUID(),
+    name: data.name,
+    cuit: data.cuit || null,
+    phone: data.phone || null,
+    email: data.email || null,
+    address: data.address || null,
+    createdAt: new Date(),
+  });
+}
+
+// ─── Sales ────────────────────────────────────────────────────────────────────
+
+export function mockGetSalesWithClients() {
+  return [...store.sales]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map((sale) => ({
+      ...sale,
+      clientName: store.clients.find((c) => c.id === sale.clientId)?.name ?? null,
+    }));
+}
+export function mockCreateSale(data: {
+  clientId: string;
+  invoiceType?: "A" | "B";
+  invoiceNumber: string;
+  date: string;
+  oc?: string;
+  patient?: string;
+  amount: string;
+  documentUrl?: string;
+}) {
+  store.sales.push({
+    id: crypto.randomUUID(),
+    clientId: data.clientId,
+    invoiceType: data.invoiceType || "A",
+    invoiceNumber: data.invoiceNumber,
+    date: data.date,
+    oc: data.oc || null,
+    patient: data.patient || null,
+    amount: data.amount,
+    status: "PENDING",
+    documentUrl: data.documentUrl || null,
+    creditNoteNumber: null,
+    creditNoteUrl: null,
+    createdAt: new Date(),
+  });
+}
+export function mockMarkSaleAsPaid(id: string) {
+  const s = store.sales.find((s) => s.id === id);
+  if (s) s.status = "PAID";
+}
+export function mockCancelSale(id: string, data: { creditNoteNumber: string; creditNoteUrl: string }) {
+  const s = store.sales.find((s) => s.id === id);
+  if (s) {
+    s.status = "CANCELLED";
+    s.creditNoteNumber = data.creditNoteNumber;
+    s.creditNoteUrl = data.creditNoteUrl;
+  }
+}
+
+// ─── Purchases ───────────────────────────────────────────────────────────────
+
+export function mockGetPurchases(): MockPurchase[] {
+  return [...store.purchases].sort((a, b) => b.date.localeCompare(a.date));
+}
+export function mockCreatePurchase(data: {
+  provider: string;
+  invoiceNumber: string;
+  date: string;
+  amount: string;
+  paymentMethod?: string;
+  remito?: string;
+  remitoUrl?: string;
+  category?: "PROVEEDOR" | "VARIOS";
+}) {
+  store.purchases.push({
+    id: crypto.randomUUID(),
+    provider: data.provider,
+    invoiceNumber: data.invoiceNumber,
+    date: data.date,
+    amount: data.amount,
+    status: "PENDING",
+    paymentMethod: data.paymentMethod || null,
+    remito: data.remito || null,
+    remitoUrl: data.remitoUrl || null,
+    category: data.category || "PROVEEDOR",
+    createdAt: new Date(),
+  });
+}
+export function mockMarkPurchaseAsPaid(id: string) {
+  const p = store.purchases.find((p) => p.id === id);
+  if (p) p.status = "PAID";
+}
+
+// ─── Checks ───────────────────────────────────────────────────────────────────
+
+export function mockGetChecks(): MockCheck[] {
+  return [...store.checks].sort((a, b) => b.dueDate.localeCompare(a.dueDate));
+}
+export function mockCreateCheck(data: {
+  type: "EMITIDO" | "RECIBIDO";
+  number: string;
+  bank: string;
+  amount: string;
+  issueDate: string;
+  dueDate: string;
+  relatedEntity?: string;
+  notes?: string;
+  photoUrl?: string;
+}) {
+  store.checks.push({
+    id: crypto.randomUUID(),
+    type: data.type,
+    number: data.number,
+    bank: data.bank,
+    amount: data.amount,
+    issueDate: data.issueDate,
+    dueDate: data.dueDate,
+    paymentDate: null,
+    status: "PENDIENTE",
+    relatedEntity: data.relatedEntity || null,
+    notes: data.notes || null,
+    photoUrl: data.photoUrl || null,
+    createdAt: new Date(),
+  });
+}
+export function mockUpdateCheckStatus(id: string, status: "DEPOSITADO" | "COBRADO" | "RECHAZADO") {
+  const c = store.checks.find((c) => c.id === id);
+  if (c) {
+    c.status = status;
+    if (status === "COBRADO") {
+      c.paymentDate = new Date().toISOString().split("T")[0];
+    }
+  }
+}
+
+// ─── Dashboard ───────────────────────────────────────────────────────────────
+
+export function mockGetDashboardData(monthStart: string, monthEnd: string) {
+  const salesThisMonth = store.sales.filter(
+    (s) => s.status !== "CANCELLED" && s.date >= monthStart && s.date <= monthEnd
+  );
+  const totalSalesMonth = salesThisMonth.reduce((sum, s) => sum + parseFloat(s.amount), 0);
+
+  const purchasesThisMonth = store.purchases.filter(
+    (p) => p.date >= monthStart && p.date <= monthEnd
+  );
+  const totalPurchasesMonth = purchasesThisMonth.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+  const pendingSales = store.sales.filter((s) => s.status === "PENDING");
+  const totalPending = pendingSales.reduce((sum, s) => sum + parseFloat(s.amount), 0);
+
+  const clientTotals: Record<string, number> = {};
+  for (const sale of pendingSales) {
+    const client = store.clients.find((c) => c.id === sale.clientId);
+    if (!client) continue;
+    clientTotals[client.name] = (clientTotals[client.name] ?? 0) + parseFloat(sale.amount);
+  }
+  const topClients = Object.entries(clientTotals)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([name, total]) => ({ name, total }));
+
+  return { totalSalesMonth, totalPurchasesMonth, totalPending, topClients };
+}

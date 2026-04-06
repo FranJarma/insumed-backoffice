@@ -1,0 +1,285 @@
+"use client";
+
+import { useState, useMemo, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon } from "lucide-react";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { markPurchaseAsPaid } from "../actions";
+import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
+import { downloadPurchasesExcel, downloadPurchasesPdf } from "@/lib/download";
+
+type PurchaseRow = {
+  id: string;
+  provider: string;
+  invoiceNumber: string;
+  date: string;
+  amount: string;
+  status: "PENDING" | "PAID";
+  paymentMethod: string | null;
+  remito: string | null;
+  remitoUrl: string | null;
+  category: "PROVEEDOR" | "VARIOS";
+};
+
+interface PurchasesTableProps {
+  purchases: PurchaseRow[];
+  category?: "PROVEEDOR" | "VARIOS";
+}
+
+const STATUS_LABELS: Record<PurchaseRow["status"], string> = {
+  PENDING: "Pendiente",
+  PAID: "Pagado",
+};
+const STATUS_VARIANT: Record<PurchaseRow["status"], "pending" | "paid"> = {
+  PENDING: "pending",
+  PAID: "paid",
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  TRANSFERENCIA: "Transferencia",
+  CHEQUE: "Cheque",
+  EFECTIVO: "Efectivo",
+};
+
+function currentYear() {
+  return new Date().getFullYear();
+}
+function currentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
+
+export function PurchasesTable({ purchases }: PurchasesTableProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
+  const [selectedProvider, setSelectedProvider] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "PENDING" | "PAID">("all");
+
+  const effectiveMonth = `${selectedYear}-${selectedMonth.slice(5)}`;
+
+  const providerNames = useMemo(
+    () => [...new Set(purchases.map((p) => p.provider))].sort(),
+    [purchases]
+  );
+
+  const filtered = useMemo(
+    () =>
+      purchases.filter((p) => {
+        const matchMonth = p.date.startsWith(effectiveMonth);
+        const matchProvider = selectedProvider === "all" || p.provider === selectedProvider;
+        const matchStatus = selectedStatus === "all" || p.status === selectedStatus;
+        return matchMonth && matchProvider && matchStatus;
+      }),
+    [purchases, effectiveMonth, selectedProvider, selectedStatus]
+  );
+
+  const totalPaid = useMemo(
+    () => filtered.filter((p) => p.status === "PAID").reduce((sum, p) => sum + parseFloat(p.amount), 0),
+    [filtered]
+  );
+  const totalPending = useMemo(
+    () => filtered.filter((p) => p.status === "PENDING").reduce((sum, p) => sum + parseFloat(p.amount), 0),
+    [filtered]
+  );
+  const total = totalPaid + totalPending;
+
+  const handlePay = (id: string) => {
+    startTransition(async () => {
+      await markPurchaseAsPaid(id);
+      router.refresh();
+    });
+  };
+
+  const handleMonthNav = (direction: "prev" | "next") => {
+    const newMonth = direction === "prev" ? prevMonth(effectiveMonth) : nextMonth(effectiveMonth);
+    setSelectedMonth(newMonth);
+    setSelectedYear(parseInt(newMonth.slice(0, 4)));
+  };
+
+  const periodLabel = monthLabel(effectiveMonth);
+  const providerLabel = selectedProvider === "all" ? "todos" : selectedProvider.toLowerCase().replace(/\s+/g, "-");
+
+  return (
+    <div className="space-y-4">
+      {/* Barra de filtros */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Año */}
+        <select
+          value={selectedYear}
+          onChange={(e) => {
+            const y = parseInt(e.target.value);
+            setSelectedYear(y);
+            setSelectedMonth(`${y}-${selectedMonth.slice(5)}`);
+          }}
+          className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          {YEARS.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+
+        {/* Mes */}
+        <div className="flex items-center gap-1 rounded-md border bg-card px-1">
+          <button onClick={() => handleMonthNav("prev")} className="rounded p-1 hover:bg-muted">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="min-w-[110px] text-center text-sm font-medium">
+            {monthLabel(effectiveMonth)}
+          </span>
+          <button onClick={() => handleMonthNav("next")} className="rounded p-1 hover:bg-muted">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Proveedor */}
+        <select
+          value={selectedProvider}
+          onChange={(e) => setSelectedProvider(e.target.value)}
+          className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="all">Todos los proveedores</option>
+          {providerNames.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+
+        {/* Estado */}
+        <select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value as "all" | "PENDING" | "PAID")}
+          className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="all">Todos los estados</option>
+          <option value="PENDING">Pendiente</option>
+          <option value="PAID">Pagado</option>
+        </select>
+
+        <span className="text-xs text-muted-foreground">{filtered.length} facturas</span>
+
+        {/* Descargas */}
+        <div className="ml-auto flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => downloadPurchasesExcel(filtered, periodLabel, providerLabel)}
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            Excel
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => downloadPurchasesPdf(filtered, periodLabel, providerLabel)}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            PDF
+          </Button>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="flex h-32 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
+          No hay compras para el período seleccionado.
+        </div>
+      ) : (
+        <div className="rounded-md border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Proveedor</TableHead>
+                <TableHead>Nº Factura</TableHead>
+                <TableHead>Remito</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Medio de Pago</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((purchase) => (
+                <TableRow key={purchase.id}>
+                  <TableCell className="font-medium">{purchase.provider}</TableCell>
+                  <TableCell className="font-mono text-sm">{purchase.invoiceNumber}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span>{purchase.remito ?? "—"}</span>
+                      {purchase.remitoUrl && (
+                        <a
+                          href={purchase.remitoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Ver foto del remito"
+                        >
+                          <ImageIcon className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(purchase.date)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {purchase.paymentMethod ? PAYMENT_LABELS[purchase.paymentMethod] ?? purchase.paymentMethod : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatCurrency(purchase.amount)}</TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_VARIANT[purchase.status]}>
+                      {STATUS_LABELS[purchase.status]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {purchase.status === "PENDING" && (
+                      <Button size="sm" variant="outline"
+                        className="h-7 gap-1 text-green-700 hover:text-green-700"
+                        onClick={() => handlePay(purchase.id)} disabled={isPending}>
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Marcar Pagado
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+
+              {/* Filas de totales */}
+              <TableRow className="border-t bg-muted/20">
+                <TableCell colSpan={5} className="text-right text-xs text-muted-foreground">
+                  Subtotal Pagado
+                </TableCell>
+                <TableCell className="text-right text-sm font-medium text-green-700">
+                  {formatCurrency(totalPaid)}
+                </TableCell>
+                <TableCell colSpan={2} />
+              </TableRow>
+              <TableRow className="bg-muted/20">
+                <TableCell colSpan={5} className="text-right text-xs text-muted-foreground">
+                  Subtotal Pendiente
+                </TableCell>
+                <TableCell className="text-right text-sm font-medium text-orange-700">
+                  {formatCurrency(totalPending)}
+                </TableCell>
+                <TableCell colSpan={2} />
+              </TableRow>
+              <TableRow className="border-t-2 bg-muted/40 font-semibold">
+                <TableCell colSpan={5} className="text-right text-sm text-muted-foreground">
+                  Total del mes
+                </TableCell>
+                <TableCell className="text-right text-base">{formatCurrency(total)}</TableCell>
+                <TableCell colSpan={2} />
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
