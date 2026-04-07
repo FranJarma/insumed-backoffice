@@ -3,12 +3,14 @@
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2 } from "lucide-react";
+
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { Tooltip } from "@/components/ui/tooltip";
 import { CancelSaleDialog } from "./CancelSaleDialog";
 import { EditSaleDialog } from "./EditSaleDialog";
 import { markSaleAsPaid, deleteSale } from "../actions";
@@ -303,29 +305,35 @@ export function SalesTable({ sales, clients, patients }: SalesTableProps) {
                     <div className="flex justify-end gap-1">
                       {sale.status === "PENDING" && (
                         <>
-                          <Button size="sm" variant="outline"
-                            className="h-7 gap-1 text-green-700 hover:text-green-700"
-                            onClick={() => handlePay(sale.id)} disabled={isPending}>
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            Cobrar
-                          </Button>
-                          <Button size="sm" variant="outline"
-                            className="h-7 gap-1 text-destructive hover:text-destructive"
-                            onClick={() => setCancelSaleId(sale.id)}>
-                            <XCircle className="h-3.5 w-3.5" />
-                            Anular
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
-                            onClick={() => setEditSale(sale)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
+                          <Tooltip label="Cobrar">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-green-700 hover:text-green-700"
+                              onClick={() => handlePay(sale.id)} disabled={isPending}>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip label="Anular">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              onClick={() => setCancelSaleId(sale.id)}>
+                              <XCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip label="Editar">
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                              onClick={() => setEditSale(sale)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
                         </>
                       )}
-                      <Button size="sm" variant="ghost"
-                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteId(sale.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <Tooltip label="Eliminar">
+                        <Button size="sm" variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteId(sale.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>

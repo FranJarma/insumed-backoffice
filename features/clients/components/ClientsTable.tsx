@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { Tooltip } from "@/components/ui/tooltip";
 import { EditClientDialog } from "./EditClientDialog";
 import { deleteClient } from "../actions";
 import { formatDate } from "@/lib/utils";
@@ -52,12 +53,16 @@ export function ClientsTable({ clients }: ClientsTableProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditClient(client)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteId(client.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip label="Editar">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditClient(client)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip label="Eliminar">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteId(client.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
                   </div>
                 </TableCell>
               </TableRow>

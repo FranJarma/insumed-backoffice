@@ -2,13 +2,15 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, CircleDollarSign } from "lucide-react";
+
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { Tooltip } from "@/components/ui/tooltip";
 import { EditPurchaseDialog } from "./EditPurchaseDialog";
 import { markPurchaseAsPaid, deletePurchase } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
@@ -265,23 +267,28 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
                     <div className="flex justify-end gap-1">
                       {purchase.status === "PENDING" && (
                         <>
-                          <Button size="sm" variant="outline"
-                            className="h-7 gap-1 text-green-700 hover:text-green-700"
-                            onClick={() => handlePay(purchase.id)} disabled={isPending}>
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            Pagado
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
-                            onClick={() => setEditPurchase(purchase)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
+                          <Tooltip label="Marcar pagado">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-green-700 hover:text-green-700"
+                              onClick={() => handlePay(purchase.id)} disabled={isPending}>
+                              <CircleDollarSign className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip label="Editar">
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                              onClick={() => setEditPurchase(purchase)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
                         </>
                       )}
-                      <Button size="sm" variant="ghost"
-                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteId(purchase.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <Tooltip label="Eliminar">
+                        <Button size="sm" variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteId(purchase.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { Tooltip } from "@/components/ui/tooltip";
 import { EditProviderDialog } from "./EditProviderDialog";
 import { deleteProvider } from "../actions";
 import type { MockProvider } from "@/db/mock-store";
@@ -53,12 +54,16 @@ export function ProvidersTable({ providers }: ProvidersTableProps) {
                 <TableCell className="text-muted-foreground">{p.address ?? "—"}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditProvider(p)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteId(p.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip label="Editar">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditProvider(p)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip label="Eliminar">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteId(p.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
                   </div>
                 </TableCell>
               </TableRow>

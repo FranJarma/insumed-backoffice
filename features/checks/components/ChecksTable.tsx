@@ -2,13 +2,14 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2, ArrowDownToLine, CircleCheck, CircleX } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { Tooltip } from "@/components/ui/tooltip";
 import { EditCheckDialog } from "./EditCheckDialog";
 import { updateCheckStatus, deleteCheck } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
@@ -237,55 +238,71 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
                     <div className="flex justify-end gap-1">
                       {check.status === "PENDIENTE" && check.type === "RECIBIDO" && (
                         <>
-                          <Button size="sm" variant="outline"
-                            className="h-7 text-xs text-blue-700 hover:text-blue-700"
-                            onClick={() => handleStatus(check.id, "DEPOSITADO")} disabled={isPending}>
-                            Depositado
-                          </Button>
-                          <Button size="sm" variant="outline"
-                            className="h-7 text-xs text-destructive hover:text-destructive"
-                            onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                            Rechazado
-                          </Button>
+                          <Tooltip label="Marcar depositado">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-blue-700 hover:text-blue-700"
+                              onClick={() => handleStatus(check.id, "DEPOSITADO")} disabled={isPending}>
+                              <ArrowDownToLine className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip label="Marcar rechazado">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
+                              <CircleX className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
                         </>
                       )}
                       {check.status === "DEPOSITADO" && (
                         <>
-                          <Button size="sm" variant="outline"
-                            className="h-7 text-xs text-green-700 hover:text-green-700"
-                            onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
-                            Cobrado
-                          </Button>
-                          <Button size="sm" variant="outline"
-                            className="h-7 text-xs text-destructive hover:text-destructive"
-                            onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                            Rechazado
-                          </Button>
+                          <Tooltip label="Marcar cobrado">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-green-700 hover:text-green-700"
+                              onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
+                              <CircleCheck className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip label="Marcar rechazado">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
+                              <CircleX className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
                         </>
                       )}
                       {check.status === "PENDIENTE" && check.type === "EMITIDO" && (
                         <>
-                          <Button size="sm" variant="outline"
-                            className="h-7 text-xs text-green-700 hover:text-green-700"
-                            onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
-                            Cobrado
-                          </Button>
-                          <Button size="sm" variant="outline"
-                            className="h-7 text-xs text-destructive hover:text-destructive"
-                            onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                            Rechazado
-                          </Button>
+                          <Tooltip label="Marcar cobrado">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-green-700 hover:text-green-700"
+                              onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
+                              <CircleCheck className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip label="Marcar rechazado">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
+                              <CircleX className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
                         </>
                       )}
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
-                        onClick={() => setEditCheck(check)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost"
-                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteId(check.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <Tooltip label="Editar">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                          onClick={() => setEditCheck(check)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label="Eliminar">
+                        <Button size="sm" variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteId(check.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>

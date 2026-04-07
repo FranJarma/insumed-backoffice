@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { Tooltip } from "@/components/ui/tooltip";
 import { EditBankDialog } from "./EditBankDialog";
 import { deleteBank } from "../actions";
 import type { MockBank } from "@/db/mock-store";
@@ -45,12 +46,16 @@ export function BanksTable({ banks }: BanksTableProps) {
                 <TableCell className="font-medium">{b.name}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditBank(b)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteId(b.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip label="Editar">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditBank(b)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip label="Eliminar">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteId(b.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
                   </div>
                 </TableCell>
               </TableRow>
