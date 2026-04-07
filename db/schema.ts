@@ -29,6 +29,7 @@ export const banks = pgTable("banks", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const clients = pgTable("clients", {
@@ -36,6 +37,7 @@ export const clients = pgTable("clients", {
   name: text("name").notNull(),
   cuit: text("cuit").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const providers = pgTable("providers", {
@@ -46,6 +48,7 @@ export const providers = pgTable("providers", {
   email: text("email"),
   address: text("address"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const patients = pgTable("patients", {
@@ -55,6 +58,7 @@ export const patients = pgTable("patients", {
     .references(() => clients.id)
     .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const sales = pgTable("sales", {
@@ -69,10 +73,11 @@ export const sales = pgTable("sales", {
   patient: text("patient"),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   status: saleStatus("status").default("PENDING").notNull(),
-  documentUrl: text("document_url"), // BASE64 foto de la factura
+  documentUrl: text("document_url"),
   creditNoteNumber: text("credit_note_number"),
   creditNoteUrl: text("credit_note_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const purchases = pgTable("purchases", {
@@ -82,11 +87,12 @@ export const purchases = pgTable("purchases", {
   date: date("date").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   status: purchaseStatus("status").default("PENDING").notNull(),
-  paymentMethod: text("payment_method"), // TRANSFERENCIA | CHEQUE | EFECTIVO
+  paymentMethod: text("payment_method"),
   remito: text("remito"),
-  remitoUrl: text("remito_url"), // BASE64 foto del remito
+  remitoUrl: text("remito_url"),
   category: purchaseCategory("category").default("PROVEEDOR").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const checks = pgTable("checks", {
@@ -97,12 +103,13 @@ export const checks = pgTable("checks", {
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   issueDate: date("issue_date").notNull(),
   dueDate: date("due_date").notNull(),
-  paymentDate: date("payment_date"), // Fecha de pago (EMITIDO) / cobro (RECIBIDO)
+  paymentDate: date("payment_date"),
   status: checkStatus("status").default("PENDIENTE").notNull(),
   relatedEntity: text("related_entity"),
   notes: text("notes"),
   photoUrl: text("photo_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 // ─── Relations ───────────────────────────────────────────────────────────────

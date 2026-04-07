@@ -8,6 +8,7 @@ export type MockBank = {
   id: string;
   name: string;
   createdAt: Date;
+  deletedAt?: Date | null;
 };
 
 export type MockClient = {
@@ -15,6 +16,7 @@ export type MockClient = {
   name: string;
   cuit: string;
   createdAt: Date;
+  deletedAt?: Date | null;
 };
 
 export type MockPatient = {
@@ -22,6 +24,7 @@ export type MockPatient = {
   name: string;
   clientId: string;
   createdAt: Date;
+  deletedAt?: Date | null;
 };
 
 export type MockProvider = {
@@ -32,6 +35,7 @@ export type MockProvider = {
   email: string | null;
   address: string | null;
   createdAt: Date;
+  deletedAt?: Date | null;
 };
 
 export type MockSale = {
@@ -44,10 +48,11 @@ export type MockSale = {
   patient: string | null;
   amount: string;
   status: "PENDING" | "PAID" | "CANCELLED";
-  documentUrl: string | null; // BASE64 foto de la factura
+  documentUrl: string | null;
   creditNoteNumber: string | null;
   creditNoteUrl: string | null;
   createdAt: Date;
+  deletedAt?: Date | null;
 };
 
 export type MockPurchase = {
@@ -62,6 +67,7 @@ export type MockPurchase = {
   remitoUrl: string | null;
   category: "PROVEEDOR" | "VARIOS";
   createdAt: Date;
+  deletedAt?: Date | null;
 };
 
 export type MockCheck = {
@@ -72,12 +78,13 @@ export type MockCheck = {
   amount: string;
   issueDate: string;
   dueDate: string;
-  paymentDate: string | null; // Fecha de pago (EMITIDO) / cobro (RECIBIDO)
+  paymentDate: string | null;
   status: "PENDIENTE" | "DEPOSITADO" | "COBRADO" | "RECHAZADO";
   relatedEntity: string | null;
   notes: string | null;
   photoUrl: string | null;
   createdAt: Date;
+  deletedAt?: Date | null;
 };
 
 type Store = {
@@ -263,6 +270,19 @@ if (!global.__mockStore_v3) {
     if (!("photoUrl" in c)) (c as MockCheck).photoUrl = null;
     if (!("paymentDate" in c)) (c as MockCheck).paymentDate = null;
   }
+  // Add deletedAt to all entities that are missing it
+  const allEntities = [
+    ...global.__mockStore_v3.banks,
+    ...global.__mockStore_v3.clients,
+    ...global.__mockStore_v3.providers,
+    ...global.__mockStore_v3.patients,
+    ...global.__mockStore_v3.sales,
+    ...global.__mockStore_v3.purchases,
+    ...global.__mockStore_v3.checks,
+  ];
+  for (const e of allEntities) {
+    if (!("deletedAt" in e)) (e as { deletedAt: null }).deletedAt = null;
+  }
 }
 
 export const store = global.__mockStore_v3!;
@@ -270,10 +290,11 @@ export const store = global.__mockStore_v3!;
 // ─── Patients ─────────────────────────────────────────────────────────────────
 
 export function mockGetPatients(): MockPatient[] {
-  return [...store.patients].sort((a, b) => a.name.localeCompare(b.name));
+  return [...store.patients].filter((p) => !p.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
 }
 export function mockGetPatientsWithClient() {
   return [...store.patients]
+    .filter((p) => !p.deletedAt)
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((p) => ({
       ...p,
@@ -281,35 +302,59 @@ export function mockGetPatientsWithClient() {
     }));
 }
 export function mockCreatePatient(data: { name: string; clientId: string }): MockPatient {
-  const newPatient: MockPatient = { id: crypto.randomUUID(), ...data, createdAt: new Date() };
+  const newPatient: MockPatient = { id: crypto.randomUUID(), ...data, createdAt: new Date(), deletedAt: null };
   store.patients.push(newPatient);
   return newPatient;
+}
+export function mockUpdatePatient(id: string, data: { name: string; clientId: string }) {
+  const p = store.patients.find((p) => p.id === id);
+  if (p) Object.assign(p, data);
+}
+export function mockSoftDeletePatient(id: string) {
+  const p = store.patients.find((p) => p.id === id);
+  if (p) p.deletedAt = new Date();
 }
 
 // ─── Banks ────────────────────────────────────────────────────────────────────
 
 export function mockGetBanks(): MockBank[] {
-  return [...store.banks].sort((a, b) => a.name.localeCompare(b.name));
+  return [...store.banks].filter((b) => !b.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
 }
 export function mockCreateBank(data: { name: string }) {
-  store.banks.push({ id: crypto.randomUUID(), name: data.name, createdAt: new Date() });
+  store.banks.push({ id: crypto.randomUUID(), name: data.name, createdAt: new Date(), deletedAt: null });
+}
+export function mockUpdateBank(id: string, data: { name: string }) {
+  const b = store.banks.find((b) => b.id === id);
+  if (b) b.name = data.name;
+}
+export function mockSoftDeleteBank(id: string) {
+  const b = store.banks.find((b) => b.id === id);
+  if (b) b.deletedAt = new Date();
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
 export function mockGetClients(): MockClient[] {
-  return [...store.clients].sort((a, b) => a.name.localeCompare(b.name));
+  return [...store.clients].filter((c) => !c.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
 }
 export function mockCreateClient(data: { name: string; cuit: string }): MockClient {
-  const newClient: MockClient = { id: crypto.randomUUID(), ...data, createdAt: new Date() };
+  const newClient: MockClient = { id: crypto.randomUUID(), ...data, createdAt: new Date(), deletedAt: null };
   store.clients.push(newClient);
   return newClient;
+}
+export function mockUpdateClient(id: string, data: { name: string; cuit: string }) {
+  const c = store.clients.find((c) => c.id === id);
+  if (c) Object.assign(c, data);
+}
+export function mockSoftDeleteClient(id: string) {
+  const c = store.clients.find((c) => c.id === id);
+  if (c) c.deletedAt = new Date();
 }
 
 // ─── Providers ───────────────────────────────────────────────────────────────
 
 export function mockGetProviders(): MockProvider[] {
-  return [...store.providers].sort((a, b) => a.name.localeCompare(b.name));
+  return [...store.providers].filter((p) => !p.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
 }
 export function mockCreateProvider(data: {
   name: string;
@@ -326,13 +371,23 @@ export function mockCreateProvider(data: {
     email: data.email || null,
     address: data.address || null,
     createdAt: new Date(),
+    deletedAt: null,
   });
+}
+export function mockUpdateProvider(id: string, data: { name: string; cuit?: string; phone?: string; email?: string; address?: string }) {
+  const p = store.providers.find((p) => p.id === id);
+  if (p) Object.assign(p, { ...data, cuit: data.cuit || null, phone: data.phone || null, email: data.email || null, address: data.address || null });
+}
+export function mockSoftDeleteProvider(id: string) {
+  const p = store.providers.find((p) => p.id === id);
+  if (p) p.deletedAt = new Date();
 }
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
 
 export function mockGetSalesWithClients() {
   return [...store.sales]
+    .filter((s) => !s.deletedAt)
     .sort((a, b) => b.date.localeCompare(a.date))
     .map((sale) => ({
       ...sale,
@@ -363,7 +418,19 @@ export function mockCreateSale(data: {
     creditNoteNumber: null,
     creditNoteUrl: null,
     createdAt: new Date(),
+    deletedAt: null,
   });
+}
+export function mockUpdateSale(id: string, data: {
+  clientId: string; invoiceType: "A" | "B"; invoiceNumber: string;
+  date: string; oc?: string; patient?: string; amount: string;
+}) {
+  const s = store.sales.find((s) => s.id === id);
+  if (s) Object.assign(s, { ...data, oc: data.oc || null, patient: data.patient || null });
+}
+export function mockSoftDeleteSale(id: string) {
+  const s = store.sales.find((s) => s.id === id);
+  if (s) s.deletedAt = new Date();
 }
 export function mockMarkSaleAsPaid(id: string) {
   const s = store.sales.find((s) => s.id === id);
@@ -381,7 +448,7 @@ export function mockCancelSale(id: string, data: { creditNoteNumber: string; cre
 // ─── Purchases ───────────────────────────────────────────────────────────────
 
 export function mockGetPurchases(): MockPurchase[] {
-  return [...store.purchases].sort((a, b) => b.date.localeCompare(a.date));
+  return [...store.purchases].filter((p) => !p.deletedAt).sort((a, b) => b.date.localeCompare(a.date));
 }
 export function mockCreatePurchase(data: {
   provider: string;
@@ -405,7 +472,19 @@ export function mockCreatePurchase(data: {
     remitoUrl: data.remitoUrl || null,
     category: data.category || "PROVEEDOR",
     createdAt: new Date(),
+    deletedAt: null,
   });
+}
+export function mockUpdatePurchase(id: string, data: {
+  provider: string; invoiceNumber: string; date: string; amount: string;
+  paymentMethod?: string; remito?: string;
+}) {
+  const p = store.purchases.find((p) => p.id === id);
+  if (p) Object.assign(p, { ...data, paymentMethod: data.paymentMethod || null, remito: data.remito || null });
+}
+export function mockSoftDeletePurchase(id: string) {
+  const p = store.purchases.find((p) => p.id === id);
+  if (p) p.deletedAt = new Date();
 }
 export function mockMarkPurchaseAsPaid(id: string) {
   const p = store.purchases.find((p) => p.id === id);
@@ -415,7 +494,7 @@ export function mockMarkPurchaseAsPaid(id: string) {
 // ─── Checks ───────────────────────────────────────────────────────────────────
 
 export function mockGetChecks(): MockCheck[] {
-  return [...store.checks].sort((a, b) => b.dueDate.localeCompare(a.dueDate));
+  return [...store.checks].filter((c) => !c.deletedAt).sort((a, b) => b.dueDate.localeCompare(a.dueDate));
 }
 export function mockCreateCheck(data: {
   type: "EMITIDO" | "RECIBIDO";
@@ -442,7 +521,19 @@ export function mockCreateCheck(data: {
     notes: data.notes || null,
     photoUrl: data.photoUrl || null,
     createdAt: new Date(),
+    deletedAt: null,
   });
+}
+export function mockUpdateCheck(id: string, data: {
+  type: "EMITIDO" | "RECIBIDO"; number: string; bank: string; amount: string;
+  issueDate: string; dueDate: string; relatedEntity?: string; notes?: string;
+}) {
+  const c = store.checks.find((c) => c.id === id);
+  if (c) Object.assign(c, { ...data, relatedEntity: data.relatedEntity || null, notes: data.notes || null });
+}
+export function mockSoftDeleteCheck(id: string) {
+  const c = store.checks.find((c) => c.id === id);
+  if (c) c.deletedAt = new Date();
 }
 export function mockUpdateCheckStatus(id: string, status: "DEPOSITADO" | "COBRADO" | "RECHAZADO") {
   const c = store.checks.find((c) => c.id === id);

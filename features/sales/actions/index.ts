@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNull } from "drizzle-orm";
 import {
   mockGetSalesWithClients,
   mockCreateSale,
   mockMarkSaleAsPaid,
   mockCancelSale,
+  mockUpdateSale,
+  mockSoftDeleteSale,
 } from "@/db/mock-store";
 import { getDb } from "@/db";
 import { sales, clients } from "@/db/schema";
@@ -36,6 +38,7 @@ export async function getSalesWithClients() {
     })
     .from(sales)
     .leftJoin(clients, eq(sales.clientId, clients.id))
+    .where(isNull(sales.deletedAt))
     .orderBy(desc(sales.date));
 }
 
@@ -55,6 +58,41 @@ export async function createSale(input: unknown) {
       patient: patient || null,
       documentUrl: documentUrl || null,
     });
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function updateSale(id: string, input: unknown) {
+  const parsed = createSaleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  if (USE_MOCK) {
+    mockUpdateSale(id, parsed.data);
+  } else {
+    const { documentUrl, oc, patient, ...rest } = parsed.data;
+    await getDb().update(sales).set({
+      ...rest,
+      oc: oc || null,
+      patient: patient || null,
+      documentUrl: documentUrl || null,
+    }).where(eq(sales.id, id));
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function deleteSale(id: string) {
+  if (USE_MOCK) {
+    mockSoftDeleteSale(id);
+  } else {
+    await getDb().update(sales).set({ deletedAt: new Date() }).where(eq(sales.id, id));
   }
 
   revalidatePath("/sales");

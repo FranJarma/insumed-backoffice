@@ -22,7 +22,7 @@ export default async function SalesPage() {
         </div>
         <CreateSaleDialog clients={clientsData} patients={patientsData} />
       </div>
-      <SalesTable sales={salesData} />
+      <SalesTable sales={salesData} clients={clientsData} patients={patientsData} />
     </div>
   );
 }

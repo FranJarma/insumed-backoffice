@@ -2,15 +2,18 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { markPurchaseAsPaid } from "../actions";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { EditPurchaseDialog } from "./EditPurchaseDialog";
+import { markPurchaseAsPaid, deletePurchase } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadPurchasesExcel, downloadPurchasesPdf } from "@/lib/download";
+import type { MockProvider } from "@/db/mock-store";
 
 type PurchaseRow = {
   id: string;
@@ -27,6 +30,7 @@ type PurchaseRow = {
 
 interface PurchasesTableProps {
   purchases: PurchaseRow[];
+  providers: MockProvider[];
   category?: "PROVEEDOR" | "VARIOS";
 }
 
@@ -55,9 +59,11 @@ function currentMonthKey() {
 
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
-export function PurchasesTable({ purchases }: PurchasesTableProps) {
+export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [editPurchase, setEditPurchase] = useState<PurchaseRow | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [selectedProvider, setSelectedProvider] = useState("all");
@@ -256,14 +262,27 @@ export function PurchasesTable({ purchases }: PurchasesTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {purchase.status === "PENDING" && (
-                      <Button size="sm" variant="outline"
-                        className="h-7 gap-1 text-green-700 hover:text-green-700"
-                        onClick={() => handlePay(purchase.id)} disabled={isPending}>
-                        <CheckCircle className="h-3.5 w-3.5" />
-                        Marcar Pagado
+                    <div className="flex justify-end gap-1">
+                      {purchase.status === "PENDING" && (
+                        <>
+                          <Button size="sm" variant="outline"
+                            className="h-7 gap-1 text-green-700 hover:text-green-700"
+                            onClick={() => handlePay(purchase.id)} disabled={isPending}>
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Pagado
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                            onClick={() => setEditPurchase(purchase)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      <Button size="sm" variant="ghost"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteId(purchase.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -273,6 +292,22 @@ export function PurchasesTable({ purchases }: PurchasesTableProps) {
           </div>
         </>
       )}
+      <EditPurchaseDialog
+        purchase={editPurchase}
+        providers={providers}
+        onOpenChange={(o) => !o && setEditPurchase(null)}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteId !== null}
+        onOpenChange={(o) => !o && setDeleteId(null)}
+        onConfirm={async () => {
+          if (deleteId) {
+            await deletePurchase(deleteId);
+            router.refresh();
+          }
+        }}
+      />
     </div>
   );
 }

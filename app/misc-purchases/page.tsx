@@ -20,7 +20,7 @@ export default async function MiscPurchasesPage() {
         </div>
         <CreatePurchaseDialog providers={providersData} category="VARIOS" />
       </div>
-      <PurchasesTable purchases={purchasesData} category="VARIOS" />
+      <PurchasesTable purchases={purchasesData} providers={providersData} category="VARIOS" />
     </div>
   );
 }

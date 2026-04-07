@@ -20,7 +20,7 @@ export default async function PatientsPage() {
         </div>
         <CreatePatientDialog clients={clientsData} />
       </div>
-      <PatientsTable patients={patientsData} />
+      <PatientsTable patients={patientsData} clients={clientsData} />
     </div>
   );
 }

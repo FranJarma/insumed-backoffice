@@ -2,18 +2,21 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { updateCheckStatus } from "../actions";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { EditCheckDialog } from "./EditCheckDialog";
+import { updateCheckStatus, deleteCheck } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
-import type { MockCheck } from "@/db/mock-store";
+import type { MockBank, MockCheck } from "@/db/mock-store";
 
 interface ChecksTableProps {
   checks: MockCheck[];
+  banks: MockBank[];
 }
 
 const STATUS_LABEL: Record<MockCheck["status"], string> = {
@@ -40,9 +43,11 @@ function currentYear() {
 
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
-export function ChecksTable({ checks }: ChecksTableProps) {
+export function ChecksTable({ checks, banks }: ChecksTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [editCheck, setEditCheck] = useState<MockCheck | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "RECIBIDO" | "EMITIDO">("ALL");
@@ -229,48 +234,59 @@ export function ChecksTable({ checks }: ChecksTableProps) {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {check.status === "PENDIENTE" && check.type === "RECIBIDO" && (
-                      <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="outline"
-                          className="h-7 text-xs text-blue-700 hover:text-blue-700"
-                          onClick={() => handleStatus(check.id, "DEPOSITADO")} disabled={isPending}>
-                          Depositado
-                        </Button>
-                        <Button size="sm" variant="outline"
-                          className="h-7 text-xs text-destructive hover:text-destructive"
-                          onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                          Rechazado
-                        </Button>
-                      </div>
-                    )}
-                    {check.status === "DEPOSITADO" && (
-                      <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="outline"
-                          className="h-7 text-xs text-green-700 hover:text-green-700"
-                          onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
-                          Cobrado
-                        </Button>
-                        <Button size="sm" variant="outline"
-                          className="h-7 text-xs text-destructive hover:text-destructive"
-                          onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                          Rechazado
-                        </Button>
-                      </div>
-                    )}
-                    {check.status === "PENDIENTE" && check.type === "EMITIDO" && (
-                      <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="outline"
-                          className="h-7 text-xs text-green-700 hover:text-green-700"
-                          onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
-                          Cobrado
-                        </Button>
-                        <Button size="sm" variant="outline"
-                          className="h-7 text-xs text-destructive hover:text-destructive"
-                          onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                          Rechazado
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex justify-end gap-1">
+                      {check.status === "PENDIENTE" && check.type === "RECIBIDO" && (
+                        <>
+                          <Button size="sm" variant="outline"
+                            className="h-7 text-xs text-blue-700 hover:text-blue-700"
+                            onClick={() => handleStatus(check.id, "DEPOSITADO")} disabled={isPending}>
+                            Depositado
+                          </Button>
+                          <Button size="sm" variant="outline"
+                            className="h-7 text-xs text-destructive hover:text-destructive"
+                            onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
+                            Rechazado
+                          </Button>
+                        </>
+                      )}
+                      {check.status === "DEPOSITADO" && (
+                        <>
+                          <Button size="sm" variant="outline"
+                            className="h-7 text-xs text-green-700 hover:text-green-700"
+                            onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
+                            Cobrado
+                          </Button>
+                          <Button size="sm" variant="outline"
+                            className="h-7 text-xs text-destructive hover:text-destructive"
+                            onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
+                            Rechazado
+                          </Button>
+                        </>
+                      )}
+                      {check.status === "PENDIENTE" && check.type === "EMITIDO" && (
+                        <>
+                          <Button size="sm" variant="outline"
+                            className="h-7 text-xs text-green-700 hover:text-green-700"
+                            onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
+                            Cobrado
+                          </Button>
+                          <Button size="sm" variant="outline"
+                            className="h-7 text-xs text-destructive hover:text-destructive"
+                            onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
+                            Rechazado
+                          </Button>
+                        </>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                        onClick={() => setEditCheck(check)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteId(check.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -280,6 +296,22 @@ export function ChecksTable({ checks }: ChecksTableProps) {
           </div>
         </>
       )}
+      <EditCheckDialog
+        check={editCheck}
+        banks={banks}
+        onOpenChange={(o) => !o && setEditCheck(null)}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteId !== null}
+        onOpenChange={(o) => !o && setDeleteId(null)}
+        onConfirm={async () => {
+          if (deleteId) {
+            await deleteCheck(deleteId);
+            router.refresh();
+          }
+        }}
+      />
     </div>
   );
 }

@@ -2,19 +2,25 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, XCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon } from "lucide-react";
+import { CheckCircle, XCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { CancelSaleDialog } from "./CancelSaleDialog";
-import { markSaleAsPaid } from "../actions";
+import { EditSaleDialog } from "./EditSaleDialog";
+import { markSaleAsPaid, deleteSale } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadSalesExcel, downloadSalesPdf } from "@/lib/download";
+import type { Client } from "@/db/schema";
+
+type PatientOption = { id: string; name: string; clientId: string };
 
 type SaleRow = {
   id: string;
+  clientId: string;
   clientName: string | null;
   invoiceType: "A" | "B";
   invoiceNumber: string;
@@ -30,6 +36,8 @@ type SaleRow = {
 
 interface SalesTableProps {
   sales: SaleRow[];
+  clients: Client[];
+  patients: PatientOption[];
 }
 
 const STATUS_LABELS: Record<SaleRow["status"], string> = {
@@ -53,10 +61,12 @@ function currentMonthKey() {
 
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
-export function SalesTable({ sales }: SalesTableProps) {
+export function SalesTable({ sales, clients, patients }: SalesTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
+  const [editSale, setEditSale] = useState<SaleRow | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [selectedClient, setSelectedClient] = useState("all");
@@ -290,22 +300,33 @@ export function SalesTable({ sales }: SalesTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    {sale.status === "PENDING" && (
-                      <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="outline"
-                          className="h-7 gap-1 text-green-700 hover:text-green-700"
-                          onClick={() => handlePay(sale.id)} disabled={isPending}>
-                          <CheckCircle className="h-3.5 w-3.5" />
-                          Cobrar
-                        </Button>
-                        <Button size="sm" variant="outline"
-                          className="h-7 gap-1 text-destructive hover:text-destructive"
-                          onClick={() => setCancelSaleId(sale.id)}>
-                          <XCircle className="h-3.5 w-3.5" />
-                          Anular
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex justify-end gap-1">
+                      {sale.status === "PENDING" && (
+                        <>
+                          <Button size="sm" variant="outline"
+                            className="h-7 gap-1 text-green-700 hover:text-green-700"
+                            onClick={() => handlePay(sale.id)} disabled={isPending}>
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Cobrar
+                          </Button>
+                          <Button size="sm" variant="outline"
+                            className="h-7 gap-1 text-destructive hover:text-destructive"
+                            onClick={() => setCancelSaleId(sale.id)}>
+                            <XCircle className="h-3.5 w-3.5" />
+                            Anular
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                            onClick={() => setEditSale(sale)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      <Button size="sm" variant="ghost"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteId(sale.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -321,6 +342,24 @@ export function SalesTable({ sales }: SalesTableProps) {
         open={cancelSaleId !== null}
         onOpenChange={(open) => !open && setCancelSaleId(null)}
         onSuccess={() => { setCancelSaleId(null); router.refresh(); }}
+      />
+
+      <EditSaleDialog
+        sale={editSale}
+        clients={clients}
+        patients={patients}
+        onOpenChange={(o) => !o && setEditSale(null)}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteId !== null}
+        onOpenChange={(o) => !o && setDeleteId(null)}
+        onConfirm={async () => {
+          if (deleteId) {
+            await deleteSale(deleteId);
+            router.refresh();
+          }
+        }}
       />
     </>
   );

@@ -18,7 +18,7 @@ export default async function ChecksPage() {
         </div>
         <CreateCheckDialog banks={banksData} />
       </div>
-      <ChecksTable checks={checksData} />
+      <ChecksTable checks={checksData} banks={banksData} />
     </div>
   );
 }

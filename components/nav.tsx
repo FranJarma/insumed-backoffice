@@ -10,10 +10,10 @@ const links = [
   { href: "/sales", label: "Ventas", icon: TrendingUp },
   { href: "/purchases", label: "Compras", icon: ShoppingCart },
   { href: "/misc-purchases", label: "Compras Varias", icon: ShoppingBag },
+  { href: "/checks", label: "Cheques", icon: FileCheck },
   { href: "/clients", label: "Clientes", icon: Users },
   { href: "/patients", label: "Pacientes", icon: UserRound },
   { href: "/providers", label: "Proveedores", icon: Truck },
-  { href: "/checks", label: "Cheques", icon: FileCheck },
   { href: "/banks", label: "Bancos", icon: Landmark },
 ];
 

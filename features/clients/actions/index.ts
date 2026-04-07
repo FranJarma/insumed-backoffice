@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { mockGetClients, mockCreateClient } from "@/db/mock-store";
+import { eq, isNull } from "drizzle-orm";
+import { mockGetClients, mockCreateClient, mockUpdateClient, mockSoftDeleteClient } from "@/db/mock-store";
 import { getDb } from "@/db";
 import { clients } from "@/db/schema";
 import { createClientSchema } from "../types";
@@ -10,7 +11,7 @@ const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 export async function getClients() {
   if (USE_MOCK) return mockGetClients();
-  return getDb().select().from(clients).orderBy(clients.name);
+  return getDb().select().from(clients).where(isNull(clients.deletedAt)).orderBy(clients.name);
 }
 
 export async function createClient(input: unknown) {
@@ -34,4 +35,31 @@ export async function createClient(input: unknown) {
 
   revalidatePath("/clients");
   return { success: true, clientId };
+}
+
+export async function updateClient(id: string, input: unknown) {
+  const parsed = createClientSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  if (USE_MOCK) {
+    mockUpdateClient(id, parsed.data);
+  } else {
+    await getDb().update(clients).set(parsed.data).where(eq(clients.id, id));
+  }
+
+  revalidatePath("/clients");
+  return { success: true };
+}
+
+export async function deleteClient(id: string) {
+  if (USE_MOCK) {
+    mockSoftDeleteClient(id);
+  } else {
+    await getDb().update(clients).set({ deletedAt: new Date() }).where(eq(clients.id, id));
+  }
+
+  revalidatePath("/clients");
+  return { success: true };
 }
