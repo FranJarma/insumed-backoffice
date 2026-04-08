@@ -73,11 +73,14 @@ export type MockPurchase = {
 export type MockCheck = {
   id: string;
   type: "EMITIDO" | "RECIBIDO";
+  kind: "COMUN" | "DIFERIDO";
   number: string;
+  operationNumber: string | null;
   bank: string;
   amount: string;
   issueDate: string;
   dueDate: string;
+  estimatedPaymentDate: string | null;
   paymentDate: string | null;
   status: "PENDIENTE" | "DEPOSITADO" | "COBRADO" | "RECHAZADO";
   relatedEntity: string | null;
@@ -248,17 +251,17 @@ function initStore(): Store {
 
   const checks: MockCheck[] = [
     // Con vencimiento en mes anterior
-    { id: "ch1", type: "RECIBIDO", number: "55544433", bank: "BBVA Argentina", amount: "97500.00", issueDate: lastMonth(1), dueDate: lastMonth(20), paymentDate: lastMonth(20), status: "COBRADO", relatedEntity: "Swiss Medical Group", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch2", type: "EMITIDO", number: "99887766", bank: "Santander Argentina", amount: "88000.00", issueDate: lastMonth(10), dueDate: lastMonth(25), paymentDate: lastMonth(25), status: "COBRADO", relatedEntity: "Laboratorios Norte SA", notes: null, photoUrl: null, createdAt: new Date() },
-    // Con vencimiento en mes actual (abril)
-    { id: "ch3", type: "RECIBIDO", number: "12345678", bank: "Banco de la Nación Argentina (BNA)", amount: "185000.00", issueDate: thisMonth(1), dueDate: thisMonth(10), paymentDate: null, status: "DEPOSITADO", relatedEntity: "OSDE", notes: "Depositado en cta. cte.", photoUrl: null, createdAt: new Date() },
-    { id: "ch4", type: "RECIBIDO", number: "98765432", bank: "Banco Galicia", amount: "230000.00", issueDate: thisMonth(1), dueDate: thisMonth(15), paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch5", type: "EMITIDO", number: "11223344", bank: "Banco de la Nación Argentina (BNA)", amount: "178000.00", issueDate: thisMonth(2), dueDate: thisMonth(20), paymentDate: null, status: "PENDIENTE", relatedEntity: "Insumos del Sur SRL", notes: "Pago FC-B-10007", photoUrl: null, createdAt: new Date() },
-    { id: "ch6", type: "RECIBIDO", number: "44556677", bank: "Banco Macro", amount: "142000.00", issueDate: thisMonth(2), dueDate: thisMonth(22), paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch7", type: "EMITIDO", number: "33221100", bank: "Supervielle", amount: "76500.00", issueDate: thisMonth(3), dueDate: thisMonth(25), paymentDate: null, status: "PENDIENTE", relatedEntity: "Distribuidora Médica SA", notes: "Pago FC-B-10006", photoUrl: null, createdAt: new Date() },
-    { id: "ch8", type: "RECIBIDO", number: "77889900", bank: "HSBC Argentina", amount: "321000.00", issueDate: thisMonth(3), dueDate: thisMonth(28), paymentDate: null, status: "DEPOSITADO", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch9", type: "RECIBIDO", number: "66554433", bank: "Banco Provincia", amount: "167000.00", issueDate: lastMonth(28), dueDate: thisMonth(12), paymentDate: null, status: "PENDIENTE", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch10", type: "EMITIDO", number: "22334455", bank: "Banco Ciudad", amount: "94000.00", issueDate: thisMonth(5), dueDate: thisMonth(30), paymentDate: null, status: "PENDIENTE", relatedEntity: "Laboratorios Norte SA", notes: "Pago FC-B-10009", photoUrl: null, createdAt: new Date() },
+    { id: "ch1", type: "RECIBIDO", kind: "COMUN", number: "55544433", operationNumber: null, bank: "BBVA Argentina", amount: "97500.00", issueDate: lastMonth(1), dueDate: lastMonth(20), estimatedPaymentDate: lastMonth(18), paymentDate: lastMonth(20), status: "COBRADO", relatedEntity: "Swiss Medical Group", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch2", type: "EMITIDO", kind: "COMUN", number: "99887766", operationNumber: null, bank: "Santander Argentina", amount: "88000.00", issueDate: lastMonth(10), dueDate: lastMonth(25), estimatedPaymentDate: lastMonth(25), paymentDate: lastMonth(25), status: "COBRADO", relatedEntity: "Laboratorios Norte SA", notes: null, photoUrl: null, createdAt: new Date() },
+    // Con vencimiento en mes actual
+    { id: "ch3", type: "RECIBIDO", kind: "DIFERIDO", number: "12345678", operationNumber: "OP-2026-001", bank: "Banco de la Nación Argentina (BNA)", amount: "185000.00", issueDate: thisMonth(1), dueDate: thisMonth(10), estimatedPaymentDate: thisMonth(10), paymentDate: null, status: "PENDIENTE", relatedEntity: "OSDE", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch4", type: "RECIBIDO", kind: "COMUN", number: "98765432", operationNumber: null, bank: "Banco Galicia", amount: "230000.00", issueDate: thisMonth(1), dueDate: thisMonth(15), estimatedPaymentDate: thisMonth(15), paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch5", type: "EMITIDO", kind: "DIFERIDO", number: "11223344", operationNumber: "OP-2026-002", bank: "Banco de la Nación Argentina (BNA)", amount: "178000.00", issueDate: thisMonth(2), dueDate: thisMonth(20), estimatedPaymentDate: thisMonth(20), paymentDate: null, status: "PENDIENTE", relatedEntity: "Insumos del Sur SRL", notes: "Pago FC-B-10007", photoUrl: null, createdAt: new Date() },
+    { id: "ch6", type: "RECIBIDO", kind: "COMUN", number: "44556677", operationNumber: null, bank: "Banco Macro", amount: "142000.00", issueDate: thisMonth(2), dueDate: thisMonth(22), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch7", type: "EMITIDO", kind: "COMUN", number: "33221100", operationNumber: null, bank: "Supervielle", amount: "76500.00", issueDate: thisMonth(3), dueDate: thisMonth(25), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Distribuidora Médica SA", notes: "Pago FC-B-10006", photoUrl: null, createdAt: new Date() },
+    { id: "ch8", type: "RECIBIDO", kind: "DIFERIDO", number: "77889900", operationNumber: "OP-2026-003", bank: "HSBC Argentina", amount: "321000.00", issueDate: thisMonth(3), dueDate: thisMonth(28), estimatedPaymentDate: thisMonth(28), paymentDate: null, status: "PENDIENTE", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch9", type: "RECIBIDO", kind: "COMUN", number: "66554433", operationNumber: null, bank: "Banco Provincia", amount: "167000.00", issueDate: lastMonth(28), dueDate: thisMonth(12), estimatedPaymentDate: thisMonth(12), paymentDate: null, status: "PENDIENTE", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch10", type: "EMITIDO", kind: "COMUN", number: "22334455", operationNumber: null, bank: "Banco Ciudad", amount: "94000.00", issueDate: thisMonth(5), dueDate: thisMonth(30), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Laboratorios Norte SA", notes: "Pago FC-B-10009", photoUrl: null, createdAt: new Date() },
   ];
 
   const supplies: MockSupply[] = [
@@ -299,10 +302,13 @@ if (!global.__mockStore_v3) {
     if (existing) existing.invoiceType = freshSale.invoiceType;
     else if (!("invoiceType" in (existing ?? {}))) (existing as unknown as MockSale).invoiceType = "A";
   }
-  // Add photoUrl / paymentDate to any checks that are missing them
+  // Add new check fields to any checks that are missing them
   for (const c of global.__mockStore_v3.checks) {
     if (!("photoUrl" in c)) (c as MockCheck).photoUrl = null;
     if (!("paymentDate" in c)) (c as MockCheck).paymentDate = null;
+    if (!("kind" in c)) (c as MockCheck).kind = "COMUN";
+    if (!("operationNumber" in c)) (c as MockCheck).operationNumber = null;
+    if (!("estimatedPaymentDate" in c)) (c as MockCheck).estimatedPaymentDate = null;
   }
   // Add deletedAt to all entities that are missing it
   const allEntities = [
@@ -580,11 +586,14 @@ export function mockGetChecks(): MockCheck[] {
 }
 export function mockCreateCheck(data: {
   type: "EMITIDO" | "RECIBIDO";
+  kind: "COMUN" | "DIFERIDO";
   number: string;
+  operationNumber?: string;
   bank: string;
   amount: string;
   issueDate: string;
   dueDate: string;
+  estimatedPaymentDate?: string;
   relatedEntity?: string;
   notes?: string;
   photoUrl?: string;
@@ -592,11 +601,14 @@ export function mockCreateCheck(data: {
   store.checks.push({
     id: crypto.randomUUID(),
     type: data.type,
+    kind: data.kind,
     number: data.number,
+    operationNumber: data.operationNumber || null,
     bank: data.bank,
     amount: data.amount,
     issueDate: data.issueDate,
     dueDate: data.dueDate,
+    estimatedPaymentDate: data.estimatedPaymentDate || null,
     paymentDate: null,
     status: "PENDIENTE",
     relatedEntity: data.relatedEntity || null,
@@ -607,22 +619,31 @@ export function mockCreateCheck(data: {
   });
 }
 export function mockUpdateCheck(id: string, data: {
-  type: "EMITIDO" | "RECIBIDO"; number: string; bank: string; amount: string;
-  issueDate: string; dueDate: string; relatedEntity?: string; notes?: string;
+  type: "EMITIDO" | "RECIBIDO"; kind: "COMUN" | "DIFERIDO"; number: string;
+  operationNumber?: string; bank: string; amount: string; issueDate: string;
+  dueDate: string; estimatedPaymentDate?: string; relatedEntity?: string; notes?: string;
 }) {
   const c = store.checks.find((c) => c.id === id);
-  if (c) Object.assign(c, { ...data, relatedEntity: data.relatedEntity || null, notes: data.notes || null });
+  if (c) Object.assign(c, {
+    ...data,
+    operationNumber: data.operationNumber || null,
+    estimatedPaymentDate: data.estimatedPaymentDate || null,
+    relatedEntity: data.relatedEntity || null,
+    notes: data.notes || null,
+  });
 }
 export function mockSoftDeleteCheck(id: string) {
   const c = store.checks.find((c) => c.id === id);
   if (c) c.deletedAt = new Date();
 }
-export function mockUpdateCheckStatus(id: string, status: "DEPOSITADO" | "COBRADO" | "RECHAZADO") {
+export function mockUpdateCheckStatus(id: string, status: MockCheck["status"]) {
   const c = store.checks.find((c) => c.id === id);
   if (c) {
     c.status = status;
     if (status === "COBRADO") {
       c.paymentDate = new Date().toISOString().split("T")[0];
+    } else if (status === "PENDIENTE") {
+      c.paymentDate = null;
     }
   }
 }

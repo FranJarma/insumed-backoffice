@@ -16,6 +16,7 @@ export const invoiceType = pgEnum("invoice_type", ["A", "B"]);
 export const purchaseStatus = pgEnum("purchase_status", ["PENDING", "PAID"]);
 export const purchaseCategory = pgEnum("purchase_category", ["PROVEEDOR", "VARIOS"]);
 export const checkType = pgEnum("check_type", ["EMITIDO", "RECIBIDO"]);
+export const checkKind = pgEnum("check_kind", ["COMUN", "DIFERIDO"]);
 export const checkStatus = pgEnum("check_status", [
   "PENDIENTE",
   "DEPOSITADO",
@@ -123,11 +124,14 @@ export const saleItems = pgTable("sale_items", {
 export const checks = pgTable("checks", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: checkType("type").notNull(),
+  kind: checkKind("kind").default("COMUN").notNull(),
   number: text("number").notNull(),
+  operationNumber: text("operation_number"),
   bank: text("bank").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   issueDate: date("issue_date").notNull(),
   dueDate: date("due_date").notNull(),
+  estimatedPaymentDate: date("estimated_payment_date"),
   paymentDate: date("payment_date"),
   status: checkStatus("status").default("PENDIENTE").notNull(),
   relatedEntity: text("related_entity"),

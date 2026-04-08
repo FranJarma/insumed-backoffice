@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2, ArrowDownToLine, CircleCheck, CircleX } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2, CircleCheck, RotateCcw } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -37,11 +37,7 @@ function currentMonthKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
-
-function currentYear() {
-  return new Date().getFullYear();
-}
-
+function currentYear() { return new Date().getFullYear(); }
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
 export function ChecksTable({ checks, banks }: ChecksTableProps) {
@@ -53,7 +49,6 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "RECIBIDO" | "EMITIDO">("ALL");
 
-  // Keep month in sync with selected year
   const effectiveMonth = `${selectedYear}-${selectedMonth.slice(5)}`;
 
   const filtered = useMemo(
@@ -67,21 +62,15 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
   );
 
   const totalRecibidos = useMemo(
-    () =>
-      filtered
-        .filter((c) => c.type === "RECIBIDO" && c.status !== "RECHAZADO")
-        .reduce((sum, c) => sum + parseFloat(c.amount), 0),
+    () => filtered.filter((c) => c.type === "RECIBIDO" && c.status !== "RECHAZADO").reduce((sum, c) => sum + parseFloat(c.amount), 0),
     [filtered]
   );
   const totalEmitidos = useMemo(
-    () =>
-      filtered
-        .filter((c) => c.type === "EMITIDO" && c.status !== "RECHAZADO")
-        .reduce((sum, c) => sum + parseFloat(c.amount), 0),
+    () => filtered.filter((c) => c.type === "EMITIDO" && c.status !== "RECHAZADO").reduce((sum, c) => sum + parseFloat(c.amount), 0),
     [filtered]
   );
 
-  const handleStatus = (id: string, status: "DEPOSITADO" | "COBRADO" | "RECHAZADO") => {
+  const handleStatus = (id: string, status: MockCheck["status"]) => {
     startTransition(async () => {
       await updateCheckStatus(id, status);
       router.refresh();
@@ -96,9 +85,8 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
 
   return (
     <div className="space-y-4">
-      {/* Barra de filtros */}
+      {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Año */}
         <select
           value={selectedYear}
           onChange={(e) => {
@@ -108,25 +96,19 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
           }}
           className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          {YEARS.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
+          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
 
-        {/* Mes */}
         <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
           <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="min-w-[110px] text-center text-sm font-medium">
-            {monthLabel(effectiveMonth)}
-          </span>
+          <span className="min-w-[110px] text-center text-sm font-medium">{monthLabel(effectiveMonth)}</span>
           <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Tipo */}
         <div className="flex rounded-md border bg-card">
           {(["ALL", "RECIBIDO", "EMITIDO"] as const).map((t) => (
             <button
@@ -140,7 +122,6 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
             </button>
           ))}
         </div>
-
       </div>
 
       {filtered.length === 0 ? (
@@ -149,7 +130,7 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
         </div>
       ) : (
         <>
-          {/* Resumen de totales */}
+          {/* Resumen */}
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border bg-card px-4 py-3">
             <div className="flex flex-wrap items-center gap-6">
               {typeFilter !== "EMITIDO" && (
@@ -172,153 +153,117 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
               </div>
             )}
           </div>
+
           <div className="rounded-md border bg-card">
             <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Nº Cheque</TableHead>
-                <TableHead>Banco</TableHead>
-                <TableHead>Entidad</TableHead>
-                <TableHead>Emisión</TableHead>
-                <TableHead>Vencimiento</TableHead>
-                <TableHead>F. Pago/Cobro</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="w-12 text-center">Foto</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((check) => (
-                <TableRow key={check.id}>
-                  <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      check.type === "RECIBIDO"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-orange-100 text-orange-700"
-                    }`}>
-                      {check.type}
-                    </span>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">{check.number}</TableCell>
-                  <TableCell className="text-muted-foreground">{check.bank}</TableCell>
-                  <TableCell className="text-muted-foreground">{check.relatedEntity ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(check.issueDate)}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(check.dueDate)}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {check.paymentDate ? (
-                      <span className="text-green-700 font-medium">{formatDate(check.paymentDate)}</span>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">{formatCurrency(check.amount)}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[check.status]}>
-                      {STATUS_LABEL[check.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {check.photoUrl ? (
-                      <a
-                        href={check.photoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded p-1 text-blue-600 hover:bg-blue-50"
-                        title="Ver foto del cheque"
-                      >
-                        <ImageIcon className="h-4 w-4" />
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      {check.status === "PENDIENTE" && check.type === "RECIBIDO" && (
-                        <>
-                          <Tooltip label="Marcar depositado">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-blue-700 hover:text-blue-700"
-                              onClick={() => handleStatus(check.id, "DEPOSITADO")} disabled={isPending}>
-                              <ArrowDownToLine className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                          <Tooltip label="Marcar rechazado">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                              <CircleX className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                        </>
-                      )}
-                      {check.status === "DEPOSITADO" && (
-                        <>
-                          <Tooltip label="Marcar cobrado">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-green-700 hover:text-green-700"
-                              onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
-                              <CircleCheck className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                          <Tooltip label="Marcar rechazado">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                              <CircleX className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                        </>
-                      )}
-                      {check.status === "PENDIENTE" && check.type === "EMITIDO" && (
-                        <>
-                          <Tooltip label="Marcar cobrado">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-green-700 hover:text-green-700"
-                              onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
-                              <CircleCheck className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                          <Tooltip label="Marcar rechazado">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleStatus(check.id, "RECHAZADO")} disabled={isPending}>
-                              <CircleX className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                        </>
-                      )}
-                      <Tooltip label="Editar">
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
-                          onClick={() => setEditCheck(check)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip label="Eliminar">
-                        <Button size="sm" variant="ghost"
-                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteId(check.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Nº Cheque</TableHead>
+                  <TableHead>N° Op.</TableHead>
+                  <TableHead>Banco</TableHead>
+                  <TableHead>Entidad</TableHead>
+                  <TableHead>Vencimiento</TableHead>
+                  <TableHead>F. Est. Cobro/Pago</TableHead>
+                  <TableHead>F. Cobro/Pago real</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="w-10 text-center">Foto</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-
-            </TableBody>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((check) => (
+                  <TableRow key={check.id}>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          check.type === "RECIBIDO" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
+                        }`}>
+                          {check.type}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">{check.kind === "COMUN" ? "Común" : "Diferido"}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">{check.number}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {check.operationNumber ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{check.bank}</TableCell>
+                    <TableCell className="text-muted-foreground">{check.relatedEntity ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(check.dueDate)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {check.estimatedPaymentDate ? (
+                        <span className="text-blue-700 font-medium">{formatDate(check.estimatedPaymentDate)}</span>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {check.paymentDate ? (
+                        <span className="text-green-700 font-medium">{formatDate(check.paymentDate)}</span>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(check.amount)}</TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_VARIANT[check.status]}>
+                        {STATUS_LABEL[check.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {check.photoUrl ? (
+                        <a href={check.photoUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center rounded p-1 text-blue-600 hover:bg-blue-50">
+                          <ImageIcon className="h-4 w-4" />
+                        </a>
+                      ) : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {check.status === "PENDIENTE" && (
+                          <Tooltip label={check.type === "RECIBIDO" ? "Marcar cobrado" : "Marcar pagado"}>
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-green-700 hover:text-green-700"
+                              onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
+                              <CircleCheck className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {check.status === "COBRADO" && (
+                          <Tooltip label="Marcar pendiente">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleStatus(check.id, "PENDIENTE")} disabled={isPending}>
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                        <Tooltip label="Editar">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                            onClick={() => setEditCheck(check)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </Tooltip>
+                        <Tooltip label="Eliminar">
+                          <Button size="sm" variant="ghost"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteId(check.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
             </Table>
           </div>
         </>
       )}
+
       <EditCheckDialog
         check={editCheck}
         banks={banks}
         onOpenChange={(o) => !o && setEditCheck(null)}
       />
-
       <ConfirmDeleteDialog
         open={deleteId !== null}
         onOpenChange={(o) => !o && setDeleteId(null)}

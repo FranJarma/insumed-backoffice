@@ -25,11 +25,14 @@ export async function createCheck(input: unknown) {
   } else {
     await getDb().insert(checks).values({
       type: parsed.data.type,
+      kind: parsed.data.kind,
       number: parsed.data.number,
+      operationNumber: parsed.data.operationNumber || null,
       bank: parsed.data.bank,
       amount: parsed.data.amount,
       issueDate: parsed.data.issueDate,
       dueDate: parsed.data.dueDate,
+      estimatedPaymentDate: parsed.data.estimatedPaymentDate || null,
       relatedEntity: parsed.data.relatedEntity || null,
       notes: parsed.data.notes || null,
       photoUrl: parsed.data.photoUrl || null,
@@ -51,11 +54,14 @@ export async function updateCheck(id: string, input: unknown) {
   } else {
     await getDb().update(checks).set({
       type: parsed.data.type,
+      kind: parsed.data.kind,
       number: parsed.data.number,
+      operationNumber: parsed.data.operationNumber || null,
       bank: parsed.data.bank,
       amount: parsed.data.amount,
       issueDate: parsed.data.issueDate,
       dueDate: parsed.data.dueDate,
+      estimatedPaymentDate: parsed.data.estimatedPaymentDate || null,
       relatedEntity: parsed.data.relatedEntity || null,
       notes: parsed.data.notes || null,
     }).where(eq(checks.id, id));
@@ -77,16 +83,17 @@ export async function deleteCheck(id: string) {
 }
 
 export async function updateCheckStatus(id: string, status: CheckStatus) {
-  if (status === "PENDIENTE") return { error: "Estado inválido" };
-
   const today = new Date().toISOString().split("T")[0];
 
   if (USE_MOCK) {
-    mockUpdateCheckStatus(id, status as "DEPOSITADO" | "COBRADO" | "RECHAZADO");
+    mockUpdateCheckStatus(id, status);
   } else {
     await getDb()
       .update(checks)
-      .set({ status, paymentDate: status === "COBRADO" ? today : undefined })
+      .set({
+        status,
+        paymentDate: status === "COBRADO" ? today : status === "PENDIENTE" ? null : undefined,
+      })
       .where(eq(checks.id, id));
   }
 
