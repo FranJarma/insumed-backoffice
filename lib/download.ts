@@ -40,6 +40,7 @@ type SaleRow = {
   patient: string | null;
   amount: string;
   status: "PENDING" | "PAID" | "CANCELLED";
+  items?: Array<{ supplyName: string; quantity: string }>;
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -141,6 +142,9 @@ export function downloadSalesExcel(
     Fecha: formatDate(s.date),
     Paciente: s.patient ?? "",
     OC: s.oc ?? "",
+    Insumos: s.items?.length
+      ? s.items.map((i) => `${i.supplyName} x${i.quantity}`).join(", ")
+      : "",
     Monto: parseFloat(s.amount),
     Estado: SALE_STATUS[s.status] ?? s.status,
   }));
@@ -148,7 +152,7 @@ export function downloadSalesExcel(
   const ws = XLSX.utils.json_to_sheet(data);
   ws["!cols"] = [
     { wch: 25 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
-    { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 12 },
+    { wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 12 },
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Ventas");
@@ -182,7 +186,7 @@ export function downloadSalesPdf(
 
   autoTable(doc, {
     startY: clientLabel !== "todos" ? 27 : 22,
-    head: [["Cliente", "Tipo", "Nº Factura", "Fecha", "Paciente", "OC", "Monto", "Estado"]],
+    head: [["Cliente", "Tipo", "Nº Factura", "Fecha", "Paciente", "OC", "Insumos", "Monto", "Estado"]],
     body: [
       ...sales.map((s) => [
         s.clientName ?? "—",
@@ -191,12 +195,15 @@ export function downloadSalesPdf(
         formatDate(s.date),
         s.patient ?? "—",
         s.oc ?? "—",
+        s.items?.length
+          ? s.items.map((i) => `${i.supplyName} x${i.quantity}`).join(", ")
+          : "—",
         formatCurrency(s.amount),
         SALE_STATUS[s.status] ?? s.status,
       ]),
-      ["", "", "", "", "Subtotal Cobrado", formatCurrency(totalPaid), ""],
-      ["", "", "", "", "Subtotal Pendiente", formatCurrency(totalPending), ""],
-      ["", "", "", "", "Total", formatCurrency(totalPaid + totalPending), ""],
+      ["", "", "", "", "", "Subtotal Cobrado", "", formatCurrency(totalPaid), ""],
+      ["", "", "", "", "", "Subtotal Pendiente", "", formatCurrency(totalPending), ""],
+      ["", "", "", "", "", "Total", "", formatCurrency(totalPaid + totalPending), ""],
     ],
     styles: { fontSize: 9 },
     headStyles: { fillColor: [30, 41, 59] },

@@ -16,7 +16,7 @@ import { EditSaleDialog } from "./EditSaleDialog";
 import { markSaleAsPaid, deleteSale } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadSalesExcel, downloadSalesPdf } from "@/lib/download";
-import type { Client } from "@/db/schema";
+import type { MockSupply } from "@/db/mock-store";
 
 type PatientOption = { id: string; name: string; clientId: string };
 
@@ -34,12 +34,16 @@ type SaleRow = {
   documentUrl: string | null;
   creditNoteNumber: string | null;
   creditNoteUrl: string | null;
+  items?: Array<{ id: string; supplyId: string | null; pm: string; supplyName: string; unitMeasure: string; quantity: string; unitPrice: string; subtotal: string }>;
 };
+
+type ClientOption = { id: string; name: string; cuit: string };
 
 interface SalesTableProps {
   sales: SaleRow[];
-  clients: Client[];
+  clients: ClientOption[];
   patients: PatientOption[];
+  supplies: MockSupply[];
 }
 
 const STATUS_LABELS: Record<SaleRow["status"], string> = {
@@ -63,7 +67,7 @@ function currentMonthKey() {
 
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
-export function SalesTable({ sales, clients, patients }: SalesTableProps) {
+export function SalesTable({ sales, clients, patients, supplies }: SalesTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
@@ -266,18 +270,19 @@ export function SalesTable({ sales, clients, patients }: SalesTableProps) {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <span className="font-mono text-sm">{sale.invoiceNumber}</span>
                       {sale.documentUrl && (
-                        <a
-                          href={sale.documentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Ver foto de la factura"
-                        >
+                        <a href={sale.documentUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800" title="Ver foto de la factura">
                           <ImageIcon className="h-3.5 w-3.5" />
                         </a>
+                      )}
+                      {sale.items && sale.items.length > 0 && (
+                        <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                          title={sale.items.map((i) => `${i.supplyName} x${i.quantity}`).join(", ")}>
+                          {sale.items.length} insumo{sale.items.length !== 1 ? "s" : ""}
+                        </span>
                       )}
                     </div>
                   </TableCell>
@@ -356,6 +361,7 @@ export function SalesTable({ sales, clients, patients }: SalesTableProps) {
         sale={editSale}
         clients={clients}
         patients={patients}
+        supplies={supplies}
         onOpenChange={(o) => !o && setEditSale(null)}
       />
 

@@ -87,6 +87,31 @@ export type MockCheck = {
   deletedAt?: Date | null;
 };
 
+export type MockSaleItem = {
+  id: string;
+  saleId: string;
+  supplyId: string | null;
+  pm: string;
+  supplyName: string;
+  unitMeasure: string;
+  quantity: string;
+  unitPrice: string;
+  subtotal: string;
+  createdAt: Date;
+};
+
+export type MockSupply = {
+  id: string;
+  pm: string;
+  name: string;
+  description: string | null;
+  unitPrice: string;
+  unitMeasure: string;
+  expiryDate: string | null;
+  createdAt: Date;
+  deletedAt?: Date | null;
+};
+
 type Store = {
   banks: MockBank[];
   clients: MockClient[];
@@ -95,6 +120,8 @@ type Store = {
   sales: MockSale[];
   purchases: MockPurchase[];
   checks: MockCheck[];
+  supplies: MockSupply[];
+  saleItems: MockSaleItem[];
 };
 
 declare global {
@@ -102,12 +129,6 @@ declare global {
   var __mockStore_v3: Store | undefined;
 }
 
-function d(offsetDays = 0): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays)
-    .toISOString()
-    .split("T")[0];
-}
 function lastMonth(day: number): string {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth() - 1, day)
@@ -240,7 +261,18 @@ function initStore(): Store {
     { id: "ch10", type: "EMITIDO", number: "22334455", bank: "Banco Ciudad", amount: "94000.00", issueDate: thisMonth(5), dueDate: thisMonth(30), paymentDate: null, status: "PENDIENTE", relatedEntity: "Laboratorios Norte SA", notes: "Pago FC-B-10009", photoUrl: null, createdAt: new Date() },
   ];
 
-  return { banks, clients, providers, patients, sales, purchases, checks };
+  const supplies: MockSupply[] = [
+    { id: "sp1", pm: "PM-0001", name: "Catéter Venoso Central", description: "Catéter de triple lumen 7Fr x 20cm", unitPrice: "12500.00", unitMeasure: "unidad", expiryDate: "2026-12-31", createdAt: new Date(), deletedAt: null },
+    { id: "sp2", pm: "PM-0002", name: "Guantes de Látex Estériles", description: "Talla M, caja x 100 pares", unitPrice: "4800.00", unitMeasure: "caja", expiryDate: "2026-06-30", createdAt: new Date(), deletedAt: null },
+    { id: "sp3", pm: "PM-0003", name: "Jeringa 10ml", description: "Con aguja 21G, estéril", unitPrice: "350.00", unitMeasure: "unidad", expiryDate: "2027-03-31", createdAt: new Date(), deletedAt: null },
+    { id: "sp4", pm: "PM-0004", name: "Apósito Transparente", description: "10x12cm, film de poliuretano", unitPrice: "2100.00", unitMeasure: "unidad", expiryDate: "2027-01-31", createdAt: new Date(), deletedAt: null },
+    { id: "sp5", pm: "PM-0005", name: "Sonda Nasogástrica N°16", description: "PVC flexible, radio-opaca", unitPrice: "3800.00", unitMeasure: "unidad", expiryDate: "2026-09-30", createdAt: new Date(), deletedAt: null },
+    { id: "sp6", pm: "PM-0006", name: "Suero Fisiológico 500ml", description: "ClNa 0.9% bolsa flexible", unitPrice: "1850.00", unitMeasure: "unidad", expiryDate: "2026-08-31", createdAt: new Date(), deletedAt: null },
+    { id: "sp7", pm: "PM-0007", name: "Gasas Estériles 10x10", description: "Tejido no tejido, paquete x 10", unitPrice: "620.00", unitMeasure: "paquete", expiryDate: null, createdAt: new Date(), deletedAt: null },
+    { id: "sp8", pm: "PM-0008", name: "Equipo de Venoclisis", description: "Con filtro de 15 micras y cámara de goteo", unitPrice: "980.00", unitMeasure: "unidad", expiryDate: "2027-06-30", createdAt: new Date(), deletedAt: null },
+  ];
+
+  return { banks, clients, providers, patients, sales, purchases, checks, supplies, saleItems: [] };
 }
 
 if (!global.__mockStore_v3) {
@@ -252,6 +284,8 @@ if (!global.__mockStore_v3) {
   if (!global.__mockStore_v3.providers) global.__mockStore_v3.providers = s.providers;
   if (!global.__mockStore_v3.checks) global.__mockStore_v3.checks = s.checks;
   if (!global.__mockStore_v3.patients) global.__mockStore_v3.patients = s.patients;
+  if (!global.__mockStore_v3.supplies) global.__mockStore_v3.supplies = s.supplies;
+  if (!global.__mockStore_v3.saleItems) global.__mockStore_v3.saleItems = [];
   // Add paymentMethod to any purchases that are missing it
   for (const p of global.__mockStore_v3.purchases) {
     if (!("paymentMethod" in p)) (p as MockPurchase).paymentMethod = null;
@@ -279,6 +313,7 @@ if (!global.__mockStore_v3) {
     ...global.__mockStore_v3.sales,
     ...global.__mockStore_v3.purchases,
     ...global.__mockStore_v3.checks,
+    ...(global.__mockStore_v3.supplies ?? []),
   ];
   for (const e of allEntities) {
     if (!("deletedAt" in e)) (e as { deletedAt: null }).deletedAt = null;
@@ -392,20 +427,36 @@ export function mockGetSalesWithClients() {
     .map((sale) => ({
       ...sale,
       clientName: store.clients.find((c) => c.id === sale.clientId)?.name ?? null,
+      items: store.saleItems.filter((i) => i.saleId === sale.id),
     }));
 }
-export function mockCreateSale(data: {
-  clientId: string;
-  invoiceType?: "A" | "B";
-  invoiceNumber: string;
-  date: string;
-  oc?: string;
-  patient?: string;
-  amount: string;
-  documentUrl?: string;
-}) {
+export function mockGetSaleItems(saleId: string): MockSaleItem[] {
+  return store.saleItems.filter((i) => i.saleId === saleId);
+}
+export function mockCreateSale(
+  data: {
+    clientId: string;
+    invoiceType?: "A" | "B";
+    invoiceNumber: string;
+    date: string;
+    oc?: string;
+    patient?: string;
+    amount: string;
+    documentUrl?: string;
+  },
+  items: Array<{
+    supplyId: string;
+    pm: string;
+    supplyName: string;
+    unitMeasure: string;
+    quantity: string;
+    unitPrice: string;
+    subtotal: string;
+  }> = []
+) {
+  const saleId = crypto.randomUUID();
   store.sales.push({
-    id: crypto.randomUUID(),
+    id: saleId,
     clientId: data.clientId,
     invoiceType: data.invoiceType || "A",
     invoiceNumber: data.invoiceNumber,
@@ -420,13 +471,44 @@ export function mockCreateSale(data: {
     createdAt: new Date(),
     deletedAt: null,
   });
+  for (const item of items) {
+    store.saleItems.push({
+      id: crypto.randomUUID(),
+      saleId,
+      supplyId: item.supplyId || null,
+      pm: item.pm,
+      supplyName: item.supplyName,
+      unitMeasure: item.unitMeasure,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      subtotal: item.subtotal,
+      createdAt: new Date(),
+    });
+  }
 }
-export function mockUpdateSale(id: string, data: {
-  clientId: string; invoiceType: "A" | "B"; invoiceNumber: string;
-  date: string; oc?: string; patient?: string; amount: string;
-}) {
+export function mockUpdateSale(
+  id: string,
+  data: { clientId: string; invoiceType: "A" | "B"; invoiceNumber: string; date: string; oc?: string; patient?: string; amount: string; },
+  items: Array<{ supplyId: string; pm: string; supplyName: string; unitMeasure: string; quantity: string; unitPrice: string; subtotal: string; }> = []
+) {
   const s = store.sales.find((s) => s.id === id);
   if (s) Object.assign(s, { ...data, oc: data.oc || null, patient: data.patient || null });
+  // Replace items
+  store.saleItems = store.saleItems.filter((i) => i.saleId !== id);
+  for (const item of items) {
+    store.saleItems.push({
+      id: crypto.randomUUID(),
+      saleId: id,
+      supplyId: item.supplyId || null,
+      pm: item.pm,
+      supplyName: item.supplyName,
+      unitMeasure: item.unitMeasure,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      subtotal: item.subtotal,
+      createdAt: new Date(),
+    });
+  }
 }
 export function mockSoftDeleteSale(id: string) {
   const s = store.sales.find((s) => s.id === id);
@@ -573,4 +655,46 @@ export function mockGetDashboardData(monthStart: string, monthEnd: string) {
     .map(([name, total]) => ({ name, total }));
 
   return { totalSalesMonth, totalPurchasesMonth, totalPending, topClients };
+}
+
+// ─── Supplies ─────────────────────────────────────────────────────────────────
+
+export function mockGetSupplies(): MockSupply[] {
+  return [...store.supplies].filter((s) => !s.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
+}
+export function mockCreateSupply(data: {
+  pm: string; name: string; description?: string;
+  unitPrice: string; unitMeasure: string; expiryDate?: string;
+}): MockSupply {
+  const s: MockSupply = {
+    id: crypto.randomUUID(),
+    pm: data.pm,
+    name: data.name,
+    description: data.description || null,
+    unitPrice: data.unitPrice,
+    unitMeasure: data.unitMeasure,
+    expiryDate: data.expiryDate || null,
+    createdAt: new Date(),
+    deletedAt: null,
+  };
+  store.supplies.push(s);
+  return s;
+}
+export function mockUpdateSupply(id: string, data: {
+  pm: string; name: string; description?: string;
+  unitPrice: string; unitMeasure: string; expiryDate?: string;
+}) {
+  const s = store.supplies.find((s) => s.id === id);
+  if (s) Object.assign(s, {
+    pm: data.pm,
+    name: data.name,
+    description: data.description || null,
+    unitPrice: data.unitPrice,
+    unitMeasure: data.unitMeasure,
+    expiryDate: data.expiryDate || null,
+  });
+}
+export function mockSoftDeleteSupply(id: string) {
+  const s = store.supplies.find((s) => s.id === id);
+  if (s) s.deletedAt = new Date();
 }

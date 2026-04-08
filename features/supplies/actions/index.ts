@@ -1,0 +1,87 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { eq, isNull } from "drizzle-orm";
+import {
+  mockGetSupplies,
+  mockCreateSupply,
+  mockUpdateSupply,
+  mockSoftDeleteSupply,
+} from "@/db/mock-store";
+import { getDb } from "@/db";
+import { supplies } from "@/db/schema";
+import { createSupplySchema } from "../types";
+
+const USE_MOCK = process.env.USE_MOCK_DATA === "true";
+
+export async function getSupplies() {
+  if (USE_MOCK) return mockGetSupplies();
+  return getDb()
+    .select()
+    .from(supplies)
+    .where(isNull(supplies.deletedAt))
+    .orderBy(supplies.name);
+}
+
+export async function createSupply(input: unknown) {
+  const parsed = createSupplySchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  if (USE_MOCK) {
+    mockCreateSupply(parsed.data);
+  } else {
+    await getDb().insert(supplies).values({
+      pm: parsed.data.pm,
+      name: parsed.data.name,
+      description: parsed.data.description || null,
+      unitPrice: parsed.data.unitPrice,
+      unitMeasure: parsed.data.unitMeasure,
+      expiryDate: parsed.data.expiryDate || null,
+    });
+  }
+
+  revalidatePath("/supplies");
+  return { success: true };
+}
+
+export async function updateSupply(id: string, input: unknown) {
+  const parsed = createSupplySchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  if (USE_MOCK) {
+    mockUpdateSupply(id, parsed.data);
+  } else {
+    await getDb()
+      .update(supplies)
+      .set({
+        pm: parsed.data.pm,
+        name: parsed.data.name,
+        description: parsed.data.description || null,
+        unitPrice: parsed.data.unitPrice,
+        unitMeasure: parsed.data.unitMeasure,
+        expiryDate: parsed.data.expiryDate || null,
+      })
+      .where(eq(supplies.id, id));
+  }
+
+  revalidatePath("/supplies");
+  return { success: true };
+}
+
+export async function deleteSupply(id: string) {
+  if (USE_MOCK) {
+    mockSoftDeleteSupply(id);
+  } else {
+    await getDb()
+      .update(supplies)
+      .set({ deletedAt: new Date() })
+      .where(eq(supplies.id, id));
+  }
+
+  revalidatePath("/supplies");
+  return { success: true };
+}

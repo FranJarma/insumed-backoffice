@@ -95,6 +95,31 @@ export const purchases = pgTable("purchases", {
   deletedAt: timestamp("deleted_at"),
 });
 
+export const supplies = pgTable("supplies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  pm: text("pm").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+  unitMeasure: text("unit_measure").notNull(),
+  expiryDate: date("expiry_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const saleItems = pgTable("sale_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  saleId: uuid("sale_id").references(() => sales.id).notNull(),
+  supplyId: uuid("supply_id").references(() => supplies.id),
+  pm: text("pm").notNull(),
+  supplyName: text("supply_name").notNull(),
+  unitMeasure: text("unit_measure").notNull(),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull(),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+  subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const checks = pgTable("checks", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: checkType("type").notNull(),
@@ -126,11 +151,17 @@ export const patientsRelations = relations(patients, ({ one }) => ({
   }),
 }));
 
-export const salesRelations = relations(sales, ({ one }) => ({
+export const salesRelations = relations(sales, ({ one, many }) => ({
   client: one(clients, {
     fields: [sales.clientId],
     references: [clients.id],
   }),
+  items: many(saleItems),
+}));
+
+export const saleItemsRelations = relations(saleItems, ({ one }) => ({
+  sale: one(sales, { fields: [saleItems.saleId], references: [sales.id] }),
+  supply: one(supplies, { fields: [saleItems.supplyId], references: [supplies.id] }),
 }));
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -149,3 +180,7 @@ export type Purchase = typeof purchases.$inferSelect;
 export type NewPurchase = typeof purchases.$inferInsert;
 export type Check = typeof checks.$inferSelect;
 export type NewCheck = typeof checks.$inferInsert;
+export type Supply = typeof supplies.$inferSelect;
+export type NewSupply = typeof supplies.$inferInsert;
+export type SaleItem = typeof saleItems.$inferSelect;
+export type NewSaleItem = typeof saleItems.$inferInsert;

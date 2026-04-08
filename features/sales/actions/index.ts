@@ -11,8 +11,8 @@ import {
   mockSoftDeleteSale,
 } from "@/db/mock-store";
 import { getDb } from "@/db";
-import { sales, clients } from "@/db/schema";
-import { createSaleSchema, cancelSaleSchema } from "../types";
+import { sales, clients, saleItems } from "@/db/schema";
+import { createSaleSchema, cancelSaleSchema, type SaleItemInput } from "../types";
 
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
@@ -42,22 +42,38 @@ export async function getSalesWithClients() {
     .orderBy(desc(sales.date));
 }
 
-export async function createSale(input: unknown) {
+export async function createSale(input: unknown, items: SaleItemInput[] = []) {
   const parsed = createSaleSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
   if (USE_MOCK) {
-    mockCreateSale(parsed.data);
+    mockCreateSale(parsed.data, items);
   } else {
+    const db = getDb();
     const { documentUrl, oc, patient, ...rest } = parsed.data;
-    await getDb().insert(sales).values({
+    const [newSale] = await db.insert(sales).values({
       ...rest,
       oc: oc || null,
       patient: patient || null,
       documentUrl: documentUrl || null,
-    });
+    }).returning({ id: sales.id });
+
+    if (items.length > 0) {
+      await db.insert(saleItems).values(
+        items.map((item) => ({
+          saleId: newSale.id,
+          supplyId: item.supplyId || null,
+          pm: item.pm,
+          supplyName: item.supplyName,
+          unitMeasure: item.unitMeasure,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+        }))
+      );
+    }
   }
 
   revalidatePath("/sales");
@@ -65,22 +81,40 @@ export async function createSale(input: unknown) {
   return { success: true };
 }
 
-export async function updateSale(id: string, input: unknown) {
+export async function updateSale(id: string, input: unknown, items: SaleItemInput[] = []) {
   const parsed = createSaleSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
   if (USE_MOCK) {
-    mockUpdateSale(id, parsed.data);
+    mockUpdateSale(id, parsed.data, items);
   } else {
+    const db = getDb();
     const { documentUrl, oc, patient, ...rest } = parsed.data;
-    await getDb().update(sales).set({
+    await db.update(sales).set({
       ...rest,
       oc: oc || null,
       patient: patient || null,
       documentUrl: documentUrl || null,
     }).where(eq(sales.id, id));
+
+    // Replace items
+    await db.delete(saleItems).where(eq(saleItems.saleId, id));
+    if (items.length > 0) {
+      await db.insert(saleItems).values(
+        items.map((item) => ({
+          saleId: id,
+          supplyId: item.supplyId || null,
+          pm: item.pm,
+          supplyName: item.supplyName,
+          unitMeasure: item.unitMeasure,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+        }))
+      );
+    }
   }
 
   revalidatePath("/sales");

@@ -1,14 +1,16 @@
 import { getClients } from "@/features/clients/actions";
 import { getPatients } from "@/features/patients/actions";
 import { getSalesWithClients } from "@/features/sales/actions";
+import { getSupplies } from "@/features/supplies/actions";
 import { CreateSaleDialog } from "@/features/sales/components/CreateSaleDialog";
 import { SalesTable } from "@/features/sales/components/SalesTable";
 
 export default async function SalesPage() {
-  const [salesData, clientsData, patientsData] = await Promise.all([
+  const [salesData, clientsData, patientsData, suppliesData] = await Promise.all([
     getSalesWithClients(),
     getClients(),
     getPatients(),
+    getSupplies(),
   ]);
 
   return (
@@ -20,9 +22,9 @@ export default async function SalesPage() {
             Gestión de facturas y cuentas a cobrar
           </p>
         </div>
-        <CreateSaleDialog clients={clientsData} patients={patientsData} />
+        <CreateSaleDialog clients={clientsData} patients={patientsData} supplies={suppliesData} />
       </div>
-      <SalesTable sales={salesData} clients={clientsData} patients={patientsData} />
+      <SalesTable sales={salesData} clients={clientsData} patients={patientsData} supplies={suppliesData} />
     </div>
   );
 }

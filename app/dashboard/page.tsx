@@ -67,19 +67,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Resumen financiero de Insumed</p>
-      </div>
-
-      <SummaryCards
-        totalSalesMonth={totalSalesMonth}
-        totalPurchasesMonth={totalPurchasesMonth}
-        totalPending={totalPending}
-        monthLabel={monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
-      />
-
-      <div className="max-w-lg">
-        <TopClientsTable clients={topClients} />
+        <h1 className="text-2xl font-bold">Bienvenido a Insumed</h1>
       </div>
     </div>
   );

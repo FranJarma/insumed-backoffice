@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Sale, Client } from "@/db/schema";
+import type { Sale } from "@/db/schema";
 
 export const createSaleSchema = z.object({
   clientId: z.string().min(1, "Seleccione un cliente válido"),
@@ -28,3 +28,13 @@ export type CancelSaleInput = z.infer<typeof cancelSaleSchema>;
 
 // Sale joined with client name
 export type SaleWithClient = Sale & { clientName: string | null };
+
+export type SaleItemInput = {
+  supplyId: string;
+  pm: string;
+  supplyName: string;
+  unitMeasure: string;
+  quantity: string;
+  unitPrice: string;
+  subtotal: string;
+};
