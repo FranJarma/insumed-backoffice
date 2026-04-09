@@ -1,8 +1,10 @@
 import { getClients } from "@/features/clients/actions";
 import { ClientsTable } from "@/features/clients/components/ClientsTable";
 import { CreateClientDialog } from "@/features/clients/components/CreateClientDialog";
+import { requirePermission } from "@/lib/auth";
 
 export default async function ClientsPage() {
+  await requirePermission("clients:read");
   const clientsData = await getClients();
 
   return (

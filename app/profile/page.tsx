@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { ChangePasswordForm } from "./change-password-form";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -9,8 +8,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default async function ProfilePage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const session = await requireAuth();
 
   return (
     <div className="max-w-lg space-y-8">

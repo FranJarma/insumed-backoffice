@@ -1,8 +1,10 @@
 import { getProviders } from "@/features/providers/actions";
 import { ProvidersTable } from "@/features/providers/components/ProvidersTable";
 import { CreateProviderDialog } from "@/features/providers/components/CreateProviderDialog";
+import { requirePermission } from "@/lib/auth";
 
 export default async function ProvidersPage() {
+  await requirePermission("providers:read");
   const providersData = await getProviders();
 
   return (

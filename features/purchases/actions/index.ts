@@ -5,11 +5,13 @@ import { desc, eq, isNull } from "drizzle-orm";
 import { mockGetPurchases, mockCreatePurchase, mockMarkPurchaseAsPaid, mockUpdatePurchase, mockSoftDeletePurchase } from "@/db/mock-store";
 import { getDb } from "@/db";
 import { purchases } from "@/db/schema";
+import { authorizeAction, requirePermission } from "@/lib/auth";
 import { createPurchaseSchema } from "../types";
 
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 export async function getPurchases(category?: "PROVEEDOR" | "VARIOS") {
+  await requirePermission(category === "VARIOS" ? "misc_purchases:read" : "purchases:read");
   if (USE_MOCK) {
     const all = mockGetPurchases();
     return category ? all.filter((p) => p.category === category) : all;
@@ -26,6 +28,10 @@ export async function createPurchase(input: unknown) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction(
+    parsed.data.category === "VARIOS" ? "misc_purchases:create" : "purchases:create"
+  );
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockCreatePurchase(parsed.data);
@@ -50,6 +56,10 @@ export async function updatePurchase(id: string, input: unknown) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction(
+    parsed.data.category === "VARIOS" ? "misc_purchases:update" : "purchases:update"
+  );
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockUpdatePurchase(id, parsed.data);
@@ -71,6 +81,9 @@ export async function updatePurchase(id: string, input: unknown) {
 }
 
 export async function deletePurchase(id: string) {
+  const auth = await authorizeAction("purchases:delete");
+  if ("error" in auth) return auth;
+
   if (USE_MOCK) {
     mockSoftDeletePurchase(id);
   } else {
@@ -84,6 +97,9 @@ export async function deletePurchase(id: string) {
 }
 
 export async function markPurchaseAsPaid(id: string) {
+  const auth = await authorizeAction("purchases:update");
+  if ("error" in auth) return auth;
+
   if (USE_MOCK) {
     mockMarkPurchaseAsPaid(id);
   } else {

@@ -4,8 +4,10 @@ import { getClients } from "@/features/clients/actions";
 import { getProviders } from "@/features/providers/actions";
 import { ChecksTable } from "@/features/checks/components/ChecksTable";
 import { CreateCheckDialog } from "@/features/checks/components/CreateCheckDialog";
+import { requirePermission } from "@/lib/auth";
 
 export default async function ChecksPage() {
+  await requirePermission("checks:read");
   const [checksData, banksData, clientsData, providersData] = await Promise.all([
     getChecks(),
     getBanks(),

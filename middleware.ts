@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { requireEnv } from "@/lib/env";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -15,7 +16,7 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
+    const secret = new TextEncoder().encode(requireEnv("SESSION_SECRET", { minLength: 32 }));
     await jwtVerify(token, secret);
     return NextResponse.next();
   } catch {

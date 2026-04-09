@@ -70,7 +70,7 @@ export function CancelSaleDialog({
 
     setIsUploading(true);
     try {
-      const key = await uploadFile(file, { directory: "facturas", entityName: "nota-credito", date: new Date().toISOString().slice(0, 10) });
+      const key = await uploadFile(file, { directory: "facturas", date: new Date().toISOString().slice(0, 10) });
       setCreditNoteKey(key);
       setValue("creditNoteUrl", key);
     } catch {

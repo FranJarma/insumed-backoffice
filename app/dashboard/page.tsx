@@ -6,6 +6,7 @@ import { getDb } from "@/db";
 import { clients, purchases, sales } from "@/db/schema";
 import { SummaryCards } from "@/features/dashboard/components/SummaryCards";
 import { TopClientsTable } from "@/features/dashboard/components/TopClientsTable";
+import { requirePermission } from "@/lib/auth";
 
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
@@ -56,6 +57,8 @@ async function getDashboardData(monthStart: string, monthEnd: string) {
 }
 
 export default async function DashboardPage() {
+  await requirePermission("dashboard:read");
+
   const now = new Date();
   const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");

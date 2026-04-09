@@ -10,11 +10,13 @@ import {
 } from "@/db/mock-store";
 import { getDb } from "@/db";
 import { supplies } from "@/db/schema";
+import { authorizeAction, requirePermission } from "@/lib/auth";
 import { createSupplySchema } from "../types";
 
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 export async function getSupplies() {
+  await requirePermission("supplies:read");
   if (USE_MOCK) return mockGetSupplies();
   return getDb()
     .select()
@@ -28,6 +30,8 @@ export async function createSupply(input: unknown) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction("supplies:create");
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockCreateSupply(parsed.data);
@@ -51,6 +55,8 @@ export async function updateSupply(id: string, input: unknown) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction("supplies:update");
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockUpdateSupply(id, parsed.data);
@@ -73,6 +79,9 @@ export async function updateSupply(id: string, input: unknown) {
 }
 
 export async function deleteSupply(id: string) {
+  const auth = await authorizeAction("supplies:delete");
+  if ("error" in auth) return auth;
+
   if (USE_MOCK) {
     mockSoftDeleteSupply(id);
   } else {

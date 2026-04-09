@@ -1,10 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { requireEnv } from "@/lib/env";
+import { hasPermission, type Permission } from "@/lib/permissions";
 
 const getSecret = () => {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET is not set. Add it to .env.local");
-  return new TextEncoder().encode(secret);
+  return new TextEncoder().encode(requireEnv("SESSION_SECRET", { minLength: 32 }));
 };
 
 export type SessionUser = {
@@ -53,4 +54,43 @@ export async function getSession(): Promise<SessionUser | null> {
 export async function deleteSession() {
   const cookieStore = await cookies();
   cookieStore.delete("session");
+}
+
+export class AuthorizationError extends Error {
+  constructor(message = "No autorizado") {
+    super(message);
+    this.name = "AuthorizationError";
+  }
+}
+
+export function isAuthorizationError(error: unknown): error is AuthorizationError {
+  return error instanceof AuthorizationError;
+}
+
+export async function requireAuth(): Promise<SessionUser> {
+  const session = await getSession();
+  if (!session) {
+    redirect("/login");
+  }
+  return session;
+}
+
+export async function requirePermission(permission: Permission): Promise<SessionUser> {
+  const session = await requireAuth();
+  if (!hasPermission(session.role, permission)) {
+    throw new AuthorizationError();
+  }
+  return session;
+}
+
+export async function authorizeAction(permission: Permission) {
+  try {
+    const session = await requirePermission(permission);
+    return { session } as const;
+  } catch (error) {
+    if (isAuthorizationError(error)) {
+      return { error: { _form: ["No autorizado"] } } as const;
+    }
+    throw error;
+  }
 }

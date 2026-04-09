@@ -57,7 +57,6 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
     try {
       const key = await uploadFile(file, {
         directory: "remitos",
-        entityName: providerValue || "sin-proveedor",
         date: watchDate || defaultValues.date,
       });
       setRemitoKey(key);

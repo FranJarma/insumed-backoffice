@@ -1,4 +1,4 @@
-import type { UploadDirectory } from "./r2";
+import type { UploadDirectory } from "./file-security";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PDF_TYPE = "application/pdf";
@@ -9,7 +9,6 @@ const MAX_DIMENSION = 1920;
 
 export interface UploadOptions {
   directory: UploadDirectory;
-  entityName: string;
   date: string;
 }
 
@@ -117,11 +116,10 @@ export async function uploadFile(file: File, opts: UploadOptions): Promise<strin
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      filename: fileToUpload.name,
       contentType: fileToUpload.type,
       directory: opts.directory,
-      entityName: opts.entityName,
       date: opts.date,
+      size: fileToUpload.size,
     }),
   });
 

@@ -2,8 +2,10 @@ import { getClients } from "@/features/clients/actions";
 import { getPatientsWithClient } from "@/features/patients/actions";
 import { PatientsTable } from "@/features/patients/components/PatientsTable";
 import { CreatePatientDialog } from "@/features/patients/components/CreatePatientDialog";
+import { requirePermission } from "@/lib/auth";
 
 export default async function PatientsPage() {
+  await requirePermission("patients:read");
   const [patientsData, clientsData] = await Promise.all([
     getPatientsWithClient(),
     getClients(),

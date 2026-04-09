@@ -9,6 +9,7 @@ export const RESOURCES = [
   "providers",
   "banks",
   "checks",
+  "files",
 ] as const;
 
 export type Resource = (typeof RESOURCES)[number];
@@ -21,10 +22,14 @@ const ALL_PERMISSIONS: Permission[] = RESOURCES.flatMap((resource) =>
   )
 );
 
+const READ_ONLY_PERMISSIONS: Permission[] = RESOURCES.map(
+  (resource) => `${resource}:read` as Permission
+);
+
 // Permissions por rol. Se irán refinando con el tiempo.
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   jefe: ALL_PERMISSIONS,
-  operario: [], // a definir
+  operario: READ_ONLY_PERMISSIONS,
   admin: ALL_PERMISSIONS,
 };
 

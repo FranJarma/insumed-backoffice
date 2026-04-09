@@ -12,11 +12,13 @@ import {
 } from "@/db/mock-store";
 import { getDb } from "@/db";
 import { sales, clients, saleItems } from "@/db/schema";
+import { authorizeAction, requirePermission } from "@/lib/auth";
 import { createSaleSchema, cancelSaleSchema, type SaleItemInput } from "../types";
 
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 export async function getSalesWithClients() {
+  await requirePermission("sales:read");
   if (USE_MOCK) return mockGetSalesWithClients();
 
   return getDb()
@@ -47,6 +49,8 @@ export async function createSale(input: unknown, items: SaleItemInput[] = []) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction("sales:create");
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockCreateSale(parsed.data, items);
@@ -86,6 +90,8 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction("sales:update");
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockUpdateSale(id, parsed.data, items);
@@ -123,6 +129,9 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
 }
 
 export async function deleteSale(id: string) {
+  const auth = await authorizeAction("sales:delete");
+  if ("error" in auth) return auth;
+
   if (USE_MOCK) {
     mockSoftDeleteSale(id);
   } else {
@@ -135,6 +144,9 @@ export async function deleteSale(id: string) {
 }
 
 export async function markSaleAsPaid(id: string) {
+  const auth = await authorizeAction("sales:update");
+  if ("error" in auth) return auth;
+
   if (USE_MOCK) {
     mockMarkSaleAsPaid(id);
   } else {
@@ -151,6 +163,8 @@ export async function cancelSale(id: string, input: unknown) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction("sales:update");
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockCancelSale(id, parsed.data);

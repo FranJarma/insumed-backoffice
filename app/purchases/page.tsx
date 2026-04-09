@@ -2,8 +2,10 @@ import { getPurchases } from "@/features/purchases/actions";
 import { getProviders } from "@/features/providers/actions";
 import { CreatePurchaseDialog } from "@/features/purchases/components/CreatePurchaseDialog";
 import { PurchasesTable } from "@/features/purchases/components/PurchasesTable";
+import { requirePermission } from "@/lib/auth";
 
 export default async function PurchasesPage() {
+  await requirePermission("purchases:read");
   const [purchasesData, providersData] = await Promise.all([
     getPurchases("PROVEEDOR"),
     getProviders(),

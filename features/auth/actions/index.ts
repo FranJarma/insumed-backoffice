@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
-import { createSession, deleteSession, getSession } from "@/lib/auth";
+import { createSession, deleteSession, requireAuth } from "@/lib/auth";
 import { loginSchema, changePasswordSchema } from "../types";
 
 export async function login(input: unknown) {
@@ -48,8 +48,7 @@ export async function logout() {
 }
 
 export async function changePassword(input: unknown) {
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const session = await requireAuth();
 
   const parsed = changePasswordSchema.safeParse(input);
   if (!parsed.success) {

@@ -4,8 +4,10 @@ import { getSalesWithClients } from "@/features/sales/actions";
 import { getSupplies } from "@/features/supplies/actions";
 import { CreateSaleDialog } from "@/features/sales/components/CreateSaleDialog";
 import { SalesTable } from "@/features/sales/components/SalesTable";
+import { requirePermission } from "@/lib/auth";
 
 export default async function SalesPage() {
+  await requirePermission("sales:read");
   const [salesData, clientsData, patientsData, suppliesData] = await Promise.all([
     getSalesWithClients(),
     getClients(),

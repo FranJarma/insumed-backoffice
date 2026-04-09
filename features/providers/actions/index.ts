@@ -5,11 +5,13 @@ import { eq, isNull } from "drizzle-orm";
 import { mockGetProviders, mockCreateProvider, mockUpdateProvider, mockSoftDeleteProvider } from "@/db/mock-store";
 import { getDb } from "@/db";
 import { providers } from "@/db/schema";
+import { authorizeAction, requirePermission } from "@/lib/auth";
 import { createProviderSchema } from "../types";
 
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 export async function getProviders() {
+  await requirePermission("providers:read");
   if (USE_MOCK) return mockGetProviders();
   return getDb().select().from(providers).where(isNull(providers.deletedAt)).orderBy(providers.name);
 }
@@ -19,6 +21,8 @@ export async function createProvider(input: unknown) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction("providers:create");
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockCreateProvider(parsed.data);
@@ -41,6 +45,8 @@ export async function updateProvider(id: string, input: unknown) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+  const auth = await authorizeAction("providers:update");
+  if ("error" in auth) return auth;
 
   if (USE_MOCK) {
     mockUpdateProvider(id, parsed.data);
@@ -59,6 +65,9 @@ export async function updateProvider(id: string, input: unknown) {
 }
 
 export async function deleteProvider(id: string) {
+  const auth = await authorizeAction("providers:delete");
+  if ("error" in auth) return auth;
+
   if (USE_MOCK) {
     mockSoftDeleteProvider(id);
   } else {

@@ -1,35 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { r2, R2_BUCKET, buildR2Key, type UploadDirectory } from "@/lib/r2";
+import { z } from "zod";
+import { getSession } from "@/lib/auth";
+import {
+  buildRandomR2Key,
+  getMaxUploadBytes,
+  isAllowedUploadDirectory,
+  isAllowedUploadType,
+} from "@/lib/file-security";
+import { hasPermission } from "@/lib/permissions";
+import { r2, R2_BUCKET } from "@/lib/r2";
 
-const ALLOWED_DIRS: UploadDirectory[] = ["cheques", "facturas", "remitos"];
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const uploadRequestSchema = z.object({
+  contentType: z.string().min(1),
+  directory: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/, "date debe tener formato YYYY-MM o YYYY-MM-DD"),
+  size: z.number().int().positive(),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const { filename, contentType, directory, entityName, date } = await req.json() as {
-      filename: string;
-      contentType: string;
-      directory: UploadDirectory;
-      entityName: string;
-      date: string;
-    };
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+    if (!hasPermission(session.role, "files:create")) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
 
-    if (!ALLOWED_DIRS.includes(directory)) {
+    const parsed = uploadRequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Payload de upload inválido" }, { status: 400 });
+    }
+
+    const { contentType, directory, date, size } = parsed.data;
+
+    if (!isAllowedUploadDirectory(directory)) {
       return NextResponse.json({ error: "Directorio inválido" }, { status: 400 });
     }
-    if (!ALLOWED_TYPES.includes(contentType)) {
+    if (!isAllowedUploadType(contentType)) {
       return NextResponse.json({ error: "Tipo de archivo no permitido" }, { status: 400 });
     }
-    if (!entityName?.trim()) {
-      return NextResponse.json({ error: "entityName es requerido" }, { status: 400 });
-    }
-    if (!date?.match(/^\d{4}-\d{2}/)) {
-      return NextResponse.json({ error: "date debe tener formato YYYY-MM o YYYY-MM-DD" }, { status: 400 });
+    if (size > getMaxUploadBytes(contentType)) {
+      return NextResponse.json({ error: "Archivo demasiado grande" }, { status: 400 });
     }
 
-    const key = buildR2Key({ directory, entityName, date, filename });
+    const key = buildRandomR2Key({ directory, date, contentType });
 
     const command = new PutObjectCommand({
       Bucket: R2_BUCKET,
@@ -38,9 +55,6 @@ export async function POST(req: NextRequest) {
     });
 
     const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 120 });
-
-    // Return the key — not a public URL. The client stores the key and
-    // requests a presigned GET URL via /api/file?key=... when needed.
     return NextResponse.json({ uploadUrl, key });
   } catch (err) {
     console.error("[upload]", err);

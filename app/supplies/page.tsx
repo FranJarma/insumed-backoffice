@@ -1,8 +1,10 @@
 import { getSupplies } from "@/features/supplies/actions";
 import { SuppliesTable } from "@/features/supplies/components/SuppliesTable";
 import { CreateSupplyDialog } from "@/features/supplies/components/CreateSupplyDialog";
+import { requirePermission } from "@/lib/auth";
 
 export default async function SuppliesPage() {
+  await requirePermission("supplies:read");
   const suppliesData = await getSupplies();
 
   return (

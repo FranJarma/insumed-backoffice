@@ -65,7 +65,6 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
     try {
       const key = await uploadFile(file, {
         directory: "cheques",
-        entityName: relatedEntity || "sin-entidad",
         date: dueDate || today,
       });
       setPhotoKey(key);

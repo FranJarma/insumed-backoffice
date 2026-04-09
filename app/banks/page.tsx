@@ -1,8 +1,10 @@
 import { getBanks } from "@/features/banks/actions";
 import { BanksTable } from "@/features/banks/components/BanksTable";
 import { CreateBankDialog } from "@/features/banks/components/CreateBankDialog";
+import { requirePermission } from "@/lib/auth";
 
 export default async function BanksPage() {
+  await requirePermission("banks:read");
   const banksData = await getBanks();
 
   return (

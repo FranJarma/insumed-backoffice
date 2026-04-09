@@ -105,10 +105,8 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
       setDocumentPreview(URL.createObjectURL(file));
     }
     try {
-      const clientName = clients.find((c) => c.id === clientId)?.name ?? "sin-cliente";
       const key = await uploadFile(file, {
         directory: "facturas",
-        entityName: clientName,
         date: watchDate || defaultValues.date!,
       });
       setDocumentKey(key);
