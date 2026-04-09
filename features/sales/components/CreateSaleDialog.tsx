@@ -55,6 +55,7 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
   const itemsTotal = items.reduce((sum, i) => sum + i.subtotal, 0);
 
   const defaultValues: Partial<CreateSaleInput> = {
+    clientId: "",
     date: new Date().toISOString().split("T")[0],
     invoiceType: "A",
   };
@@ -167,7 +168,7 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
         <Button><PlusCircle className="h-4 w-4" />Nueva Venta</Button>
       </DialogTrigger>
 
-      <DialogContent className="flex flex-col sm:max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="flex flex-col sm:max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>Registrar Venta</DialogTitle>
         </DialogHeader>

@@ -103,13 +103,13 @@ export function ClientAutocomplete({ clients, value, onChange, error }: ClientAu
           type="text"
           value={inputValue}
           placeholder="Buscar o escribir cliente..."
+          onFocus={() => setOpen(true)}
           onChange={(e) => {
             setInputValue(e.target.value);
             if (value) onChange(""); // clear selection when typing
             setOpen(true);
             setCreatingMode(false);
           }}
-          onFocus={() => setOpen(true)}
           className={`w-full rounded-md border bg-background px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
             error ? "border-destructive" : ""
           }`}

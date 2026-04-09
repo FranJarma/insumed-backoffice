@@ -71,7 +71,7 @@ export function EditPurchaseDialog({ purchase, providers, onOpenChange }: EditPu
 
   return (
     <Dialog open={!!purchase} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Editar Compra</DialogTitle>
         </DialogHeader>
@@ -120,19 +120,20 @@ export function EditPurchaseDialog({ purchase, providers, onOpenChange }: EditPu
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="edit-paymentMethod">Medio de Pago</Label>
+              <Label htmlFor="edit-paymentMethod">Medio de Pago <span className="text-destructive">*</span></Label>
               <select
                 id="edit-paymentMethod"
                 {...register("paymentMethod")}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errors.paymentMethod ? "border-destructive" : ""}`}
               >
-                <option value="">Sin especificar</option>
+                <option value="">Seleccionar...</option>
                 {PAYMENT_METHODS.map((m) => (
                   <option key={m.value} value={m.value}>
                     {m.label}
                   </option>
                 ))}
               </select>
+              {errors.paymentMethod && <p className="text-xs text-destructive">{errors.paymentMethod.message}</p>}
             </div>
           </div>
 

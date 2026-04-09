@@ -17,7 +17,7 @@ export const createPurchaseSchema = z.object({
       (v) => !isNaN(parseFloat(v)) && parseFloat(v) > 0,
       "El monto debe ser mayor a 0"
     ),
-  paymentMethod: z.string().optional(),
+  paymentMethod: z.string().min(1, "El medio de pago es requerido"),
   remito: z.string().optional(),
   remitoUrl: z.string().optional(),
   category: z.enum(["PROVEEDOR", "VARIOS"]).default("PROVEEDOR"),

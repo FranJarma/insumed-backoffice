@@ -75,12 +75,12 @@ export function ProviderAutocomplete({
           type="text"
           value={inputValue}
           placeholder={placeholder}
+          onFocus={() => setOpen(true)}
           onChange={(e) => {
             setInputValue(e.target.value);
             onChange(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
           className={`w-full rounded-md border bg-background px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
             error ? "border-destructive" : ""
           }`}

@@ -32,7 +32,7 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const defaultValues = { date: new Date().toISOString().split("T")[0], category };
+  const defaultValues = { provider: "", date: new Date().toISOString().split("T")[0], category };
 
   const {
     register, handleSubmit, reset, setValue, watch,
@@ -105,7 +105,7 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
           {category === "VARIOS" ? "Nueva Compra Varia" : "Nueva Compra"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{category === "VARIOS" ? "Registrar Compra Varia" : "Registrar Compra"}</DialogTitle>
         </DialogHeader>
@@ -142,12 +142,13 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="paymentMethod">Medio de Pago</Label>
+              <Label htmlFor="paymentMethod">Medio de Pago <span className="text-destructive">*</span></Label>
               <select id="paymentMethod" {...register("paymentMethod")}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">Sin especificar</option>
+                className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errors.paymentMethod ? "border-destructive" : ""}`}>
+                <option value="">Seleccionar...</option>
                 {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
+              {errors.paymentMethod && <p className="text-xs text-destructive">{errors.paymentMethod.message}</p>}
             </div>
           </div>
 

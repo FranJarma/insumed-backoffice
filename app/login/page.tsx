@@ -49,7 +49,6 @@ export default function LoginPage() {
           <span hidden className="text-2xl font-bold tracking-tight text-primary">
             Insumed
           </span>
-          <p className="text-sm text-muted-foreground">Sistema de gestión</p>
         </div>
 
         {/* Formulario */}

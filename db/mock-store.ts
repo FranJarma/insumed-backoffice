@@ -8,7 +8,7 @@ export type MockBank = {
   id: string;
   name: string;
   createdAt: Date;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
 };
 
 export type MockClient = {
@@ -16,7 +16,7 @@ export type MockClient = {
   name: string;
   cuit: string;
   createdAt: Date;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
 };
 
 export type MockPatient = {
@@ -24,7 +24,7 @@ export type MockPatient = {
   name: string;
   clientId: string;
   createdAt: Date;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
 };
 
 export type MockProvider = {
@@ -35,7 +35,7 @@ export type MockProvider = {
   email: string | null;
   address: string | null;
   createdAt: Date;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
 };
 
 export type MockSale = {
@@ -52,7 +52,7 @@ export type MockSale = {
   creditNoteNumber: string | null;
   creditNoteUrl: string | null;
   createdAt: Date;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
 };
 
 export type MockPurchase = {
@@ -67,7 +67,7 @@ export type MockPurchase = {
   remitoUrl: string | null;
   category: "PROVEEDOR" | "VARIOS";
   createdAt: Date;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
 };
 
 export type MockCheck = {
@@ -87,7 +87,7 @@ export type MockCheck = {
   notes: string | null;
   photoUrl: string | null;
   createdAt: Date;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
 };
 
 export type MockSaleItem = {
@@ -112,7 +112,7 @@ export type MockSupply = {
   unitMeasure: string;
   expiryDate: string | null;
   createdAt: Date;
-  deletedAt?: Date | null;
+  deletedAt: Date | null;
 };
 
 type Store = {
@@ -147,121 +147,121 @@ function thisMonth(day: number): string {
 
 function initStore(): Store {
   const banks: MockBank[] = [
-    { id: "bk1", name: "Banco de la Nación Argentina (BNA)", createdAt: new Date("2024-01-01") },
-    { id: "bk2", name: "Banco Macro", createdAt: new Date("2024-01-01") },
-    { id: "bk3", name: "Supervielle", createdAt: new Date("2024-01-01") },
-    { id: "bk4", name: "Banco Galicia", createdAt: new Date("2024-01-01") },
-    { id: "bk5", name: "BBVA Argentina", createdAt: new Date("2024-01-01") },
-    { id: "bk6", name: "Santander Argentina", createdAt: new Date("2024-01-01") },
-    { id: "bk7", name: "HSBC Argentina", createdAt: new Date("2024-01-01") },
-    { id: "bk8", name: "Banco Ciudad", createdAt: new Date("2024-01-01") },
-    { id: "bk9", name: "Banco Provincia", createdAt: new Date("2024-01-01") },
+    { id: "bk1", name: "Banco de la Nación Argentina (BNA)", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "bk2", name: "Banco Macro", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "bk3", name: "Supervielle", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "bk4", name: "Banco Galicia", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "bk5", name: "BBVA Argentina", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "bk6", name: "Santander Argentina", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "bk7", name: "HSBC Argentina", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "bk8", name: "Banco Ciudad", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "bk9", name: "Banco Provincia", createdAt: new Date("2024-01-01"), deletedAt: null },
   ];
 
   const clients: MockClient[] = [
-    { id: "c1", name: "OSDE", cuit: "30-54563559-6", createdAt: new Date("2024-01-01") },
-    { id: "c2", name: "Swiss Medical Group", cuit: "30-67726579-3", createdAt: new Date("2024-01-01") },
-    { id: "c3", name: "Galeno Argentina", cuit: "30-68539351-5", createdAt: new Date("2024-01-01") },
-    { id: "c4", name: "Medicus", cuit: "30-52081635-8", createdAt: new Date("2024-01-01") },
-    { id: "c5", name: "OMINT", cuit: "30-52022338-4", createdAt: new Date("2024-01-01") },
+    { id: "c1", name: "OSDE", cuit: "30-54563559-6", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "c2", name: "Swiss Medical Group", cuit: "30-67726579-3", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "c3", name: "Galeno Argentina", cuit: "30-68539351-5", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "c4", name: "Medicus", cuit: "30-52081635-8", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "c5", name: "OMINT", cuit: "30-52022338-4", createdAt: new Date("2024-01-01"), deletedAt: null },
   ];
 
   const providers: MockProvider[] = [
-    { id: "p1", name: "Distribuidora Médica SA", cuit: "30-71234567-1", phone: "011-4321-0000", email: "ventas@distribmed.com.ar", address: "Av. Corrientes 1234, CABA", createdAt: new Date("2024-01-01") },
-    { id: "p2", name: "Insumos del Sur SRL", cuit: "30-68901234-5", phone: "011-4567-8901", email: "info@insumosdelsur.com.ar", address: "Av. Rivadavia 5678, CABA", createdAt: new Date("2024-01-01") },
-    { id: "p3", name: "MedSupply Argentina", cuit: "30-70345678-9", phone: "0341-456-7890", email: "contacto@medsupply.com.ar", address: "San Martín 890, Rosario", createdAt: new Date("2024-02-01") },
-    { id: "p4", name: "Laboratorios Norte SA", cuit: "30-65432100-3", phone: "0351-234-5678", email: "pedidos@labnorte.com.ar", address: "Colón 456, Córdoba", createdAt: new Date("2024-02-01") },
+    { id: "p1", name: "Distribuidora Médica SA", cuit: "30-71234567-1", phone: "011-4321-0000", email: "ventas@distribmed.com.ar", address: "Av. Corrientes 1234, CABA", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "p2", name: "Insumos del Sur SRL", cuit: "30-68901234-5", phone: "011-4567-8901", email: "info@insumosdelsur.com.ar", address: "Av. Rivadavia 5678, CABA", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "p3", name: "MedSupply Argentina", cuit: "30-70345678-9", phone: "0341-456-7890", email: "contacto@medsupply.com.ar", address: "San Martín 890, Rosario", createdAt: new Date("2024-02-01"), deletedAt: null },
+    { id: "p4", name: "Laboratorios Norte SA", cuit: "30-65432100-3", phone: "0351-234-5678", email: "pedidos@labnorte.com.ar", address: "Colón 456, Córdoba", createdAt: new Date("2024-02-01"), deletedAt: null },
   ];
 
   const patients: MockPatient[] = [
     // OSDE (c1)
-    { id: "pt1", name: "García, Juan Carlos", clientId: "c1", createdAt: new Date("2024-01-01") },
-    { id: "pt2", name: "Torres, Marta", clientId: "c1", createdAt: new Date("2024-01-01") },
-    { id: "pt3", name: "Herrera, Diego", clientId: "c1", createdAt: new Date("2024-01-01") },
-    { id: "pt4", name: "Martínez, Pedro", clientId: "c1", createdAt: new Date("2024-01-01") },
+    { id: "pt1", name: "García, Juan Carlos", clientId: "c1", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt2", name: "Torres, Marta", clientId: "c1", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt3", name: "Herrera, Diego", clientId: "c1", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt4", name: "Martínez, Pedro", clientId: "c1", createdAt: new Date("2024-01-01"), deletedAt: null },
     // Swiss Medical (c2)
-    { id: "pt5", name: "López, María Elena", clientId: "c2", createdAt: new Date("2024-01-01") },
-    { id: "pt6", name: "Díaz, Roberto", clientId: "c2", createdAt: new Date("2024-01-01") },
-    { id: "pt7", name: "Jiménez, Lucía", clientId: "c2", createdAt: new Date("2024-01-01") },
+    { id: "pt5", name: "López, María Elena", clientId: "c2", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt6", name: "Díaz, Roberto", clientId: "c2", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt7", name: "Jiménez, Lucía", clientId: "c2", createdAt: new Date("2024-01-01"), deletedAt: null },
     // Galeno (c3)
-    { id: "pt8", name: "Rodríguez, Carlos", clientId: "c3", createdAt: new Date("2024-01-01") },
-    { id: "pt9", name: "Sánchez, Carlos", clientId: "c3", createdAt: new Date("2024-01-01") },
-    { id: "pt10", name: "Álvarez, Claudia", clientId: "c3", createdAt: new Date("2024-01-01") },
+    { id: "pt8", name: "Rodríguez, Carlos", clientId: "c3", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt9", name: "Sánchez, Carlos", clientId: "c3", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt10", name: "Álvarez, Claudia", clientId: "c3", createdAt: new Date("2024-01-01"), deletedAt: null },
     // Medicus (c4)
-    { id: "pt11", name: "Fernández, Ana", clientId: "c4", createdAt: new Date("2024-01-01") },
-    { id: "pt12", name: "Ruiz, Sergio", clientId: "c4", createdAt: new Date("2024-01-01") },
-    { id: "pt13", name: "Vargas, Eduardo", clientId: "c4", createdAt: new Date("2024-01-01") },
+    { id: "pt11", name: "Fernández, Ana", clientId: "c4", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt12", name: "Ruiz, Sergio", clientId: "c4", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt13", name: "Vargas, Eduardo", clientId: "c4", createdAt: new Date("2024-01-01"), deletedAt: null },
     // OMINT (c5)
-    { id: "pt14", name: "González, Laura", clientId: "c5", createdAt: new Date("2024-01-01") },
-    { id: "pt15", name: "Moreno, Patricia", clientId: "c5", createdAt: new Date("2024-01-01") },
-    { id: "pt16", name: "Castro, Valeria", clientId: "c5", createdAt: new Date("2024-01-01") },
+    { id: "pt14", name: "González, Laura", clientId: "c5", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt15", name: "Moreno, Patricia", clientId: "c5", createdAt: new Date("2024-01-01"), deletedAt: null },
+    { id: "pt16", name: "Castro, Valeria", clientId: "c5", createdAt: new Date("2024-01-01"), deletedAt: null },
   ];
 
   const sales: MockSale[] = [
     // Mes anterior (marzo)
-    { id: "s1", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00001", date: lastMonth(5), oc: "OC-2025-001", patient: "García, Juan Carlos", amount: "185000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s2", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00002", date: lastMonth(8), oc: "OC-2025-002", patient: "López, María Elena", amount: "97500.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s3", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00001", date: lastMonth(12), oc: "OC-2025-003", patient: "Rodríguez, Carlos", amount: "230000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s4", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00004", date: lastMonth(15), oc: "OC-2025-004", patient: "Fernández, Ana", amount: "75000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s5", clientId: "c1", invoiceType: "B", invoiceNumber: "FC-B-00002", date: lastMonth(20), oc: "OC-2025-005", patient: "Martínez, Pedro", amount: "312000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s6", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00006", date: lastMonth(22), oc: "OC-2025-006", patient: "González, Laura", amount: "145000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s7", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00007", date: lastMonth(28), oc: "OC-2025-007", patient: "Díaz, Roberto", amount: "88000.00", status: "CANCELLED", documentUrl: null, creditNoteNumber: "NC-A-00001", creditNoteUrl: "https://example.com/nc-00001.pdf", createdAt: new Date() },
+    { id: "s1", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00001", date: lastMonth(5), oc: "OC-2025-001", patient: "García, Juan Carlos", amount: "185000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s2", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00002", date: lastMonth(8), oc: "OC-2025-002", patient: "López, María Elena", amount: "97500.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s3", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00001", date: lastMonth(12), oc: "OC-2025-003", patient: "Rodríguez, Carlos", amount: "230000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s4", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00004", date: lastMonth(15), oc: "OC-2025-004", patient: "Fernández, Ana", amount: "75000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s5", clientId: "c1", invoiceType: "B", invoiceNumber: "FC-B-00002", date: lastMonth(20), oc: "OC-2025-005", patient: "Martínez, Pedro", amount: "312000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s6", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00006", date: lastMonth(22), oc: "OC-2025-006", patient: "González, Laura", amount: "145000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s7", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00007", date: lastMonth(28), oc: "OC-2025-007", patient: "Díaz, Roberto", amount: "88000.00", status: "CANCELLED", documentUrl: null, creditNoteNumber: "NC-A-00001", creditNoteUrl: "https://example.com/nc-00001.pdf", createdAt: new Date(), deletedAt: null },
     // Mes actual (abril)
-    { id: "s8", clientId: "c3", invoiceType: "A", invoiceNumber: "FC-A-00008", date: thisMonth(1), oc: "OC-2025-008", patient: "Sánchez, Carlos", amount: "420000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s9", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00009", date: thisMonth(1), oc: "OC-2025-009", patient: "Torres, Marta", amount: "190000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s10", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00010", date: thisMonth(2), oc: "OC-2025-010", patient: "Ruiz, Sergio", amount: "98000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s11", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00011", date: thisMonth(2), oc: "OC-2025-011", patient: "Moreno, Patricia", amount: "321000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s12", clientId: "c2", invoiceType: "B", invoiceNumber: "FC-B-00003", date: thisMonth(3), oc: "OC-2025-012", patient: "Jiménez, Lucía", amount: "167000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s13", clientId: "c1", invoiceType: "B", invoiceNumber: "FC-B-00004", date: thisMonth(5), oc: "OC-2025-013", patient: "Herrera, Diego", amount: "89500.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s14", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00005", date: thisMonth(7), oc: "OC-2025-014", patient: "Álvarez, Claudia", amount: "455000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s15", clientId: "c4", invoiceType: "B", invoiceNumber: "FC-B-00006", date: thisMonth(8), oc: "OC-2025-015", patient: "Vargas, Eduardo", amount: "143000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
-    { id: "s16", clientId: "c5", invoiceType: "B", invoiceNumber: "FC-B-00007", date: thisMonth(10), oc: "OC-2025-016", patient: "Castro, Valeria", amount: "275000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date() },
+    { id: "s8", clientId: "c3", invoiceType: "A", invoiceNumber: "FC-A-00008", date: thisMonth(1), oc: "OC-2025-008", patient: "Sánchez, Carlos", amount: "420000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s9", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00009", date: thisMonth(1), oc: "OC-2025-009", patient: "Torres, Marta", amount: "190000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s10", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00010", date: thisMonth(2), oc: "OC-2025-010", patient: "Ruiz, Sergio", amount: "98000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s11", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00011", date: thisMonth(2), oc: "OC-2025-011", patient: "Moreno, Patricia", amount: "321000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s12", clientId: "c2", invoiceType: "B", invoiceNumber: "FC-B-00003", date: thisMonth(3), oc: "OC-2025-012", patient: "Jiménez, Lucía", amount: "167000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s13", clientId: "c1", invoiceType: "B", invoiceNumber: "FC-B-00004", date: thisMonth(5), oc: "OC-2025-013", patient: "Herrera, Diego", amount: "89500.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s14", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00005", date: thisMonth(7), oc: "OC-2025-014", patient: "Álvarez, Claudia", amount: "455000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s15", clientId: "c4", invoiceType: "B", invoiceNumber: "FC-B-00006", date: thisMonth(8), oc: "OC-2025-015", patient: "Vargas, Eduardo", amount: "143000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s16", clientId: "c5", invoiceType: "B", invoiceNumber: "FC-B-00007", date: thisMonth(10), oc: "OC-2025-016", patient: "Castro, Valeria", amount: "275000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
   ];
 
   const purchases: MockPurchase[] = [
     // Mes anterior (marzo)
-    { id: "pu1", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10001", date: lastMonth(10), amount: "95000.00", status: "PAID", paymentMethod: "TRANSFERENCIA", remito: "R-10001", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu2", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10002", date: lastMonth(15), amount: "178000.00", status: "PAID", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu3", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10003", date: lastMonth(20), amount: "63000.00", status: "PAID", paymentMethod: "EFECTIVO", remito: "R-10003", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu4", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10004", date: lastMonth(22), amount: "210000.00", status: "PAID", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu5", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10005", date: lastMonth(28), amount: "88000.00", status: "PAID", paymentMethod: "CHEQUE", remito: "R-10005", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu1", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10001", date: lastMonth(10), amount: "95000.00", status: "PAID", paymentMethod: "TRANSFERENCIA", remito: "R-10001", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu2", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10002", date: lastMonth(15), amount: "178000.00", status: "PAID", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu3", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10003", date: lastMonth(20), amount: "63000.00", status: "PAID", paymentMethod: "EFECTIVO", remito: "R-10003", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu4", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10004", date: lastMonth(22), amount: "210000.00", status: "PAID", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu5", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10005", date: lastMonth(28), amount: "88000.00", status: "PAID", paymentMethod: "CHEQUE", remito: "R-10005", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
     // Mes actual (abril)
-    { id: "pu6", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10006", date: thisMonth(1), amount: "142000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu7", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10007", date: thisMonth(1), amount: "76500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: "R-10007", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu8", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10008", date: thisMonth(2), amount: "218000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu9", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10009", date: thisMonth(2), amount: "94000.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu10", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10010", date: thisMonth(3), amount: "55000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: "R-10010", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu11", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10011", date: thisMonth(5), amount: "187000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu12", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10012", date: thisMonth(7), amount: "63000.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu13", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10013", date: thisMonth(10), amount: "112000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: "R-10013", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu14", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10014", date: thisMonth(11), amount: "340000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu15", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10015", date: thisMonth(12), amount: "89500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu16", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10016", date: thisMonth(14), amount: "156000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: "R-10016", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu17", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10017", date: thisMonth(15), amount: "274000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu18", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10018", date: thisMonth(16), amount: "48500.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu19", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10019", date: thisMonth(17), amount: "193000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu20", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10020", date: thisMonth(18), amount: "67000.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu21", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10021", date: thisMonth(21), amount: "128000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu22", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10022", date: thisMonth(22), amount: "415000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
-    { id: "pu23", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10023", date: thisMonth(24), amount: "72500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date() },
+    { id: "pu6", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10006", date: thisMonth(1), amount: "142000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu7", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10007", date: thisMonth(1), amount: "76500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: "R-10007", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu8", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10008", date: thisMonth(2), amount: "218000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu9", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10009", date: thisMonth(2), amount: "94000.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu10", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10010", date: thisMonth(3), amount: "55000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: "R-10010", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu11", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10011", date: thisMonth(5), amount: "187000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu12", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10012", date: thisMonth(7), amount: "63000.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu13", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10013", date: thisMonth(10), amount: "112000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: "R-10013", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu14", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10014", date: thisMonth(11), amount: "340000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu15", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10015", date: thisMonth(12), amount: "89500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu16", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10016", date: thisMonth(14), amount: "156000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: "R-10016", remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu17", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10017", date: thisMonth(15), amount: "274000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu18", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10018", date: thisMonth(16), amount: "48500.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu19", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10019", date: thisMonth(17), amount: "193000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu20", provider: "Insumos del Sur SRL", invoiceNumber: "FC-B-10020", date: thisMonth(18), amount: "67000.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu21", provider: "Laboratorios Norte SA", invoiceNumber: "FC-B-10021", date: thisMonth(21), amount: "128000.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu22", provider: "Distribuidora Médica SA", invoiceNumber: "FC-B-10022", date: thisMonth(22), amount: "415000.00", status: "PENDING", paymentMethod: "TRANSFERENCIA", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
+    { id: "pu23", provider: "MedSupply Argentina", invoiceNumber: "FC-B-10023", date: thisMonth(24), amount: "72500.00", status: "PENDING", paymentMethod: "CHEQUE", remito: null, remitoUrl: null, category: "PROVEEDOR", createdAt: new Date(), deletedAt: null },
     // Compras Varias
-    { id: "pu24", provider: "Kiosco Don Pedro", invoiceNumber: "TV-001", date: thisMonth(3), amount: "8500.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "VARIOS", createdAt: new Date() },
-    { id: "pu25", provider: "Librería Central", invoiceNumber: "TV-002", date: thisMonth(8), amount: "12300.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "VARIOS", createdAt: new Date() },
+    { id: "pu24", provider: "Kiosco Don Pedro", invoiceNumber: "TV-001", date: thisMonth(3), amount: "8500.00", status: "PAID", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "VARIOS", createdAt: new Date(), deletedAt: null },
+    { id: "pu25", provider: "Librería Central", invoiceNumber: "TV-002", date: thisMonth(8), amount: "12300.00", status: "PENDING", paymentMethod: "EFECTIVO", remito: null, remitoUrl: null, category: "VARIOS", createdAt: new Date(), deletedAt: null },
   ];
 
   const checks: MockCheck[] = [
     // Con vencimiento en mes anterior
-    { id: "ch1", type: "RECIBIDO", kind: "COMUN", number: "55544433", operationNumber: null, bank: "BBVA Argentina", amount: "97500.00", issueDate: lastMonth(1), dueDate: lastMonth(20), estimatedPaymentDate: lastMonth(18), paymentDate: lastMonth(20), status: "COBRADO", relatedEntity: "Swiss Medical Group", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch2", type: "EMITIDO", kind: "COMUN", number: "99887766", operationNumber: null, bank: "Santander Argentina", amount: "88000.00", issueDate: lastMonth(10), dueDate: lastMonth(25), estimatedPaymentDate: lastMonth(25), paymentDate: lastMonth(25), status: "COBRADO", relatedEntity: "Laboratorios Norte SA", notes: null, photoUrl: null, createdAt: new Date() },
+    { id: "ch1", type: "RECIBIDO", kind: "COMUN", number: "55544433", operationNumber: null, bank: "BBVA Argentina", amount: "97500.00", issueDate: lastMonth(1), dueDate: lastMonth(20), estimatedPaymentDate: lastMonth(18), paymentDate: lastMonth(20), status: "COBRADO", relatedEntity: "Swiss Medical Group", notes: null, photoUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "ch2", type: "EMITIDO", kind: "COMUN", number: "99887766", operationNumber: null, bank: "Santander Argentina", amount: "88000.00", issueDate: lastMonth(10), dueDate: lastMonth(25), estimatedPaymentDate: lastMonth(25), paymentDate: lastMonth(25), status: "COBRADO", relatedEntity: "Laboratorios Norte SA", notes: null, photoUrl: null, createdAt: new Date(), deletedAt: null },
     // Con vencimiento en mes actual
-    { id: "ch3", type: "RECIBIDO", kind: "DIFERIDO", number: "12345678", operationNumber: "OP-2026-001", bank: "Banco de la Nación Argentina (BNA)", amount: "185000.00", issueDate: thisMonth(1), dueDate: thisMonth(10), estimatedPaymentDate: thisMonth(10), paymentDate: null, status: "PENDIENTE", relatedEntity: "OSDE", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch4", type: "RECIBIDO", kind: "COMUN", number: "98765432", operationNumber: null, bank: "Banco Galicia", amount: "230000.00", issueDate: thisMonth(1), dueDate: thisMonth(15), estimatedPaymentDate: thisMonth(15), paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch5", type: "EMITIDO", kind: "DIFERIDO", number: "11223344", operationNumber: "OP-2026-002", bank: "Banco de la Nación Argentina (BNA)", amount: "178000.00", issueDate: thisMonth(2), dueDate: thisMonth(20), estimatedPaymentDate: thisMonth(20), paymentDate: null, status: "PENDIENTE", relatedEntity: "Insumos del Sur SRL", notes: "Pago FC-B-10007", photoUrl: null, createdAt: new Date() },
-    { id: "ch6", type: "RECIBIDO", kind: "COMUN", number: "44556677", operationNumber: null, bank: "Banco Macro", amount: "142000.00", issueDate: thisMonth(2), dueDate: thisMonth(22), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch7", type: "EMITIDO", kind: "COMUN", number: "33221100", operationNumber: null, bank: "Supervielle", amount: "76500.00", issueDate: thisMonth(3), dueDate: thisMonth(25), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Distribuidora Médica SA", notes: "Pago FC-B-10006", photoUrl: null, createdAt: new Date() },
-    { id: "ch8", type: "RECIBIDO", kind: "DIFERIDO", number: "77889900", operationNumber: "OP-2026-003", bank: "HSBC Argentina", amount: "321000.00", issueDate: thisMonth(3), dueDate: thisMonth(28), estimatedPaymentDate: thisMonth(28), paymentDate: null, status: "PENDIENTE", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch9", type: "RECIBIDO", kind: "COMUN", number: "66554433", operationNumber: null, bank: "Banco Provincia", amount: "167000.00", issueDate: lastMonth(28), dueDate: thisMonth(12), estimatedPaymentDate: thisMonth(12), paymentDate: null, status: "PENDIENTE", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date() },
-    { id: "ch10", type: "EMITIDO", kind: "COMUN", number: "22334455", operationNumber: null, bank: "Banco Ciudad", amount: "94000.00", issueDate: thisMonth(5), dueDate: thisMonth(30), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Laboratorios Norte SA", notes: "Pago FC-B-10009", photoUrl: null, createdAt: new Date() },
+    { id: "ch3", type: "RECIBIDO", kind: "DIFERIDO", number: "12345678", operationNumber: "OP-2026-001", bank: "Banco de la Nación Argentina (BNA)", amount: "185000.00", issueDate: thisMonth(1), dueDate: thisMonth(10), estimatedPaymentDate: thisMonth(10), paymentDate: null, status: "PENDIENTE", relatedEntity: "OSDE", notes: null, photoUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "ch4", type: "RECIBIDO", kind: "COMUN", number: "98765432", operationNumber: null, bank: "Banco Galicia", amount: "230000.00", issueDate: thisMonth(1), dueDate: thisMonth(15), estimatedPaymentDate: thisMonth(15), paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "ch5", type: "EMITIDO", kind: "DIFERIDO", number: "11223344", operationNumber: "OP-2026-002", bank: "Banco de la Nación Argentina (BNA)", amount: "178000.00", issueDate: thisMonth(2), dueDate: thisMonth(20), estimatedPaymentDate: thisMonth(20), paymentDate: null, status: "PENDIENTE", relatedEntity: "Insumos del Sur SRL", notes: "Pago FC-B-10007", photoUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "ch6", type: "RECIBIDO", kind: "COMUN", number: "44556677", operationNumber: null, bank: "Banco Macro", amount: "142000.00", issueDate: thisMonth(2), dueDate: thisMonth(22), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Galeno Argentina", notes: null, photoUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "ch7", type: "EMITIDO", kind: "COMUN", number: "33221100", operationNumber: null, bank: "Supervielle", amount: "76500.00", issueDate: thisMonth(3), dueDate: thisMonth(25), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Distribuidora Médica SA", notes: "Pago FC-B-10006", photoUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "ch8", type: "RECIBIDO", kind: "DIFERIDO", number: "77889900", operationNumber: "OP-2026-003", bank: "HSBC Argentina", amount: "321000.00", issueDate: thisMonth(3), dueDate: thisMonth(28), estimatedPaymentDate: thisMonth(28), paymentDate: null, status: "PENDIENTE", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "ch9", type: "RECIBIDO", kind: "COMUN", number: "66554433", operationNumber: null, bank: "Banco Provincia", amount: "167000.00", issueDate: lastMonth(28), dueDate: thisMonth(12), estimatedPaymentDate: thisMonth(12), paymentDate: null, status: "PENDIENTE", relatedEntity: "OMINT", notes: null, photoUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "ch10", type: "EMITIDO", kind: "COMUN", number: "22334455", operationNumber: null, bank: "Banco Ciudad", amount: "94000.00", issueDate: thisMonth(5), dueDate: thisMonth(30), estimatedPaymentDate: null, paymentDate: null, status: "PENDIENTE", relatedEntity: "Laboratorios Norte SA", notes: "Pago FC-B-10009", photoUrl: null, createdAt: new Date(), deletedAt: null },
   ];
 
   const supplies: MockSupply[] = [
@@ -524,12 +524,12 @@ export function mockMarkSaleAsPaid(id: string) {
   const s = store.sales.find((s) => s.id === id);
   if (s) s.status = "PAID";
 }
-export function mockCancelSale(id: string, data: { creditNoteNumber: string; creditNoteUrl: string }) {
+export function mockCancelSale(id: string, data: { creditNoteNumber: string; creditNoteUrl?: string }) {
   const s = store.sales.find((s) => s.id === id);
   if (s) {
     s.status = "CANCELLED";
     s.creditNoteNumber = data.creditNoteNumber;
-    s.creditNoteUrl = data.creditNoteUrl;
+    s.creditNoteUrl = data.creditNoteUrl ?? null;
   }
 }
 

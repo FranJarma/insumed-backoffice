@@ -179,7 +179,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, onOpenChange
 
   return (
     <Dialog open={!!sale} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col sm:max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="flex flex-col sm:max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>Editar Venta</DialogTitle>
         </DialogHeader>
