@@ -3,6 +3,7 @@
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2, CircleCheck, RotateCcw } from "lucide-react";
+import { fileUrl } from "@/lib/upload";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -15,9 +16,13 @@ import { updateCheckStatus, deleteCheck } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import type { MockBank, MockCheck } from "@/db/mock-store";
 
+type EntityOption = { id: string; name: string };
+
 interface ChecksTableProps {
   checks: MockCheck[];
   banks: MockBank[];
+  clients: EntityOption[];
+  providers: EntityOption[];
 }
 
 const STATUS_LABEL: Record<MockCheck["status"], string> = {
@@ -40,7 +45,7 @@ function currentMonthKey() {
 function currentYear() { return new Date().getFullYear(); }
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
-export function ChecksTable({ checks, banks }: ChecksTableProps) {
+export function ChecksTable({ checks, banks, clients, providers }: ChecksTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editCheck, setEditCheck] = useState<MockCheck | null>(null);
@@ -210,7 +215,7 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
                     </TableCell>
                     <TableCell className="text-center">
                       {check.photoUrl ? (
-                        <a href={check.photoUrl} target="_blank" rel="noopener noreferrer"
+                        <a href={fileUrl(check.photoUrl)} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center justify-center rounded p-1 text-blue-600 hover:bg-blue-50">
                           <ImageIcon className="h-4 w-4" />
                         </a>
@@ -260,6 +265,8 @@ export function ChecksTable({ checks, banks }: ChecksTableProps) {
       )}
 
       <EditCheckDialog
+        clients={clients}
+        providers={providers}
         check={editCheck}
         banks={banks}
         onOpenChange={(o) => !o && setEditCheck(null)}

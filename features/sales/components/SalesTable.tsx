@@ -16,6 +16,7 @@ import { EditSaleDialog } from "./EditSaleDialog";
 import { markSaleAsPaid, deleteSale } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadSalesExcel, downloadSalesPdf } from "@/lib/download";
+import { fileUrl } from "@/lib/upload";
 import type { MockSupply } from "@/db/mock-store";
 
 type PatientOption = { id: string; name: string; clientId: string };
@@ -273,7 +274,7 @@ export function SalesTable({ sales, clients, patients, supplies }: SalesTablePro
                     <div className="flex items-center gap-1.5">
                       <span className="font-mono text-sm">{sale.invoiceNumber}</span>
                       {sale.documentUrl && (
-                        <a href={sale.documentUrl} target="_blank" rel="noopener noreferrer"
+                        <a href={fileUrl(sale.documentUrl)} target="_blank" rel="noopener noreferrer"
                           className="text-blue-600 hover:text-blue-800" title="Ver foto de la factura">
                           <ImageIcon className="h-3.5 w-3.5" />
                         </a>
@@ -297,7 +298,7 @@ export function SalesTable({ sales, clients, patients, supplies }: SalesTablePro
                         <div className="flex items-center gap-1">
                           <span className="font-mono text-xs text-muted-foreground">{sale.creditNoteNumber}</span>
                           {sale.creditNoteUrl && (
-                            <a href={sale.creditNoteUrl} target="_blank" rel="noopener noreferrer"
+                            <a href={fileUrl(sale.creditNoteUrl)} target="_blank" rel="noopener noreferrer"
                               className="text-muted-foreground hover:text-foreground">
                               <ImageIcon className="h-3 w-3" />
                             </a>

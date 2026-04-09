@@ -17,10 +17,7 @@ export const createSaleSchema = z.object({
 
 export const cancelSaleSchema = z.object({
   creditNoteNumber: z.string().min(1, "El número de nota de crédito es requerido"),
-  creditNoteUrl: z
-    .string()
-    .min(1, "La URL de la nota de crédito es requerida")
-    .url("URL de nota de crédito inválida"),
+  creditNoteUrl: z.string().optional(),
 });
 
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;

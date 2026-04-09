@@ -3,6 +3,7 @@
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, CircleDollarSign } from "lucide-react";
+import { fileUrl } from "@/lib/upload";
 
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -242,7 +243,7 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
                       <span>{purchase.remito ?? "—"}</span>
                       {purchase.remitoUrl && (
                         <a
-                          href={purchase.remitoUrl}
+                          href={fileUrl(purchase.remitoUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:text-blue-800"

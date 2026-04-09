@@ -15,14 +15,19 @@ import { Label } from "@/components/ui/label";
 import { updateCheck } from "../actions";
 import { createCheckSchema, type CreateCheckInput } from "../types";
 import type { MockBank, MockCheck } from "@/db/mock-store";
+import { EntityAutocomplete } from "./EntityAutocomplete";
+
+type EntityOption = { id: string; name: string };
 
 interface EditCheckDialogProps {
   check: MockCheck | null;
   banks: MockBank[];
+  clients: EntityOption[];
+  providers: EntityOption[];
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditCheckDialog({ check, banks, onOpenChange }: EditCheckDialogProps) {
+export function EditCheckDialog({ check, banks, clients, providers, onOpenChange }: EditCheckDialogProps) {
   const router = useRouter();
 
   const {
@@ -52,6 +57,8 @@ export function EditCheckDialog({ check, banks, onOpenChange }: EditCheckDialogP
 
   const selectedBank = watch("bank");
   const kind = watch("kind");
+  const type = watch("type");
+  const relatedEntity = watch("relatedEntity");
 
   const onSubmit = async (data: CreateCheckInput) => {
     if (!check) return;
@@ -168,8 +175,16 @@ export function EditCheckDialog({ check, banks, onOpenChange }: EditCheckDialogP
 
             {/* Entidad + Notas */}
             <div className="space-y-1.5">
-              <Label htmlFor="edit-relatedEntity">Entidad <span className="text-xs text-muted-foreground">(cliente / proveedor)</span></Label>
-              <Input id="edit-relatedEntity" {...register("relatedEntity")} />
+              <Label>
+                {type === "EMITIDO" ? "Proveedor" : "Cliente"}
+                <span className="ml-1 text-xs text-muted-foreground">(opcional)</span>
+              </Label>
+              <EntityAutocomplete
+                entities={type === "EMITIDO" ? providers : clients}
+                value={relatedEntity ?? ""}
+                onChange={(v) => setValue("relatedEntity", v, { shouldValidate: true })}
+                placeholder={type === "EMITIDO" ? "Buscar proveedor..." : "Buscar cliente..."}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="edit-notes">Notas <span className="text-xs text-muted-foreground">(opcional)</span></Label>
