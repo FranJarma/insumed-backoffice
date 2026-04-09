@@ -11,6 +11,7 @@ import {
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
+export const userRole = pgEnum("user_role", ["jefe", "operario", "admin"]);
 export const saleStatus = pgEnum("sale_status", ["PENDING", "PAID", "CANCELLED"]);
 export const invoiceType = pgEnum("invoice_type", ["A", "B"]);
 export const purchaseStatus = pgEnum("purchase_status", ["PENDING", "PAID"]);
@@ -25,6 +26,16 @@ export const checkStatus = pgEnum("check_status", [
 ]);
 
 // ─── Tables ─────────────────────────────────────────────────────────────────
+
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  role: userRole("role").default("operario").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
 
 export const banks = pgTable("banks", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -170,6 +181,8 @@ export const saleItemsRelations = relations(saleItems, ({ one }) => ({
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 export type Bank = typeof banks.$inferSelect;
 export type NewBank = typeof banks.$inferInsert;
 export type Client = typeof clients.$inferSelect;

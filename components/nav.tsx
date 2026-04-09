@@ -2,8 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShoppingCart, ShoppingBag, Users, TrendingUp, Truck, FileCheck, Landmark, UserRound, Package } from "lucide-react";
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  ShoppingBag,
+  Users,
+  TrendingUp,
+  Truck,
+  FileCheck,
+  Landmark,
+  UserRound,
+  Package,
+  LogOut,
+  UserCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logout } from "@/features/auth/actions";
+import type { SessionUser } from "@/lib/auth";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -18,14 +33,23 @@ const links = [
   { href: "/banks", label: "Bancos", icon: Landmark },
 ];
 
-export function Nav() {
+const ROLE_LABELS: Record<string, string> = {
+  jefe: "Jefe",
+  operario: "Operario",
+  admin: "Administrador",
+};
+
+interface NavProps {
+  user: SessionUser;
+}
+
+export function Nav({ user }: NavProps) {
   const pathname = usePathname();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 flex w-56 flex-col border-r bg-background">
       {/* Logo */}
       <div className="flex h-16 items-center justify-center border-b px-4">
-        {/* Guardá el logo en /public/logo.png */}
         <img
           src="/logo.webp"
           alt="Insumed"
@@ -50,7 +74,7 @@ export function Nav() {
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   pathname === href || pathname.startsWith(href + "/")
-                    ? "bg-primary text-primary-foreground"
+                    ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
@@ -62,8 +86,37 @@ export function Nav() {
         </ul>
       </nav>
 
-      <div className="border-t p-4">
-        <p className="text-xs text-muted-foreground">Insumed v1.0</p>
+      {/* Usuario */}
+      <div className="border-t p-3 space-y-2">
+        <div className="px-1">
+          <p className="text-sm font-medium leading-none truncate">{user.name}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {ROLE_LABELS[user.role] ?? user.role}
+          </p>
+        </div>
+        <div className="space-y-0.5">
+          <Link
+            href="/profile"
+            className={cn(
+              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+              pathname === "/profile"
+                ? "text-primary bg-primary/10"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            <UserCircle className="h-4 w-4" />
+            Mi perfil
+          </Link>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              Cerrar sesión
+            </button>
+          </form>
+        </div>
       </div>
     </aside>
   );
