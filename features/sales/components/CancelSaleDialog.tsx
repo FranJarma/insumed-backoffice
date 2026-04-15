@@ -44,12 +44,13 @@ export function CancelSaleDialog({
     handleSubmit,
     reset,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<CancelSaleInput>({
     resolver: zodResolver(cancelSaleSchema),
     defaultValues: {
       cancellationDate: new Date().toISOString().split("T")[0],
     },
+    mode: "onChange",
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,7 +220,7 @@ export function CancelSaleDialog({
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>
               Cancelar
             </Button>
-            <Button type="submit" variant="destructive" disabled={isSubmitting || isUploading}>
+            <Button type="submit" variant="destructive" disabled={isSubmitting || isUploading || !isValid}>
               {isSubmitting ? "Anulando..." : "Confirmar Anulación"}
             </Button>
           </div>

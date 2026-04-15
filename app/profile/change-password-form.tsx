@@ -18,9 +18,10 @@ export function ChangePasswordForm() {
     handleSubmit,
     reset,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<ChangePasswordInput>({
     resolver: zodResolver(changePasswordSchema),
+    mode: "onChange",
   });
 
   async function onSubmit(data: ChangePasswordInput) {
@@ -88,7 +89,7 @@ export function ChangePasswordForm() {
         </p>
       )}
 
-      <Button type="submit" disabled={isSubmitting}>
+      <Button type="submit" disabled={isSubmitting || !isValid}>
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -22,8 +22,8 @@ export function CreateProviderDialog() {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateProviderInput>({ resolver: zodResolver(createProviderSchema) });
+    formState: { errors, isSubmitting, isValid },
+  } = useForm<CreateProviderInput>({ resolver: zodResolver(createProviderSchema), mode: "onChange" });
 
   const onSubmit = async (data: CreateProviderInput) => {
     const result = await createProvider(data);
@@ -79,7 +79,7 @@ export function CreateProviderDialog() {
             <Button type="button" variant="outline" onClick={() => { reset(); setOpen(false); }}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting ? "Guardando..." : "Guardar Proveedor"}
             </Button>
           </div>

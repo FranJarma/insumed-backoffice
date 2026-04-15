@@ -22,8 +22,8 @@ export function CreateBankDialog() {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateBankInput>({ resolver: zodResolver(createBankSchema) });
+    formState: { errors, isSubmitting, isValid },
+  } = useForm<CreateBankInput>({ resolver: zodResolver(createBankSchema), mode: "onChange" });
 
   const onSubmit = async (data: CreateBankInput) => {
     const result = await createBank(data);
@@ -57,7 +57,7 @@ export function CreateBankDialog() {
             <Button type="button" variant="outline" onClick={() => { reset(); setOpen(false); }}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting ? "Guardando..." : "Guardar Banco"}
             </Button>
           </div>

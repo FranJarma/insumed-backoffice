@@ -21,10 +21,11 @@ export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel }: S
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<CreateSupplyInput>({
     resolver: zodResolver(createSupplySchema),
     values: defaultValues as CreateSupplyInput | undefined,
+    mode: "onChange",
   });
 
   const unitPrice = watch("unitPrice");
@@ -139,7 +140,7 @@ export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel }: S
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || !isValid}>
           {isSubmitting ? "Guardando..." : submitLabel}
         </Button>
       </div>

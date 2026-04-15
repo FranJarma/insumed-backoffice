@@ -31,9 +31,10 @@ export function CreatePatientDialog({ clients }: CreatePatientDialogProps) {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<CreatePatientInput>({
     resolver: zodResolver(createPatientSchema),
+    mode: "onChange",
   });
 
   const onSubmit = async (data: CreatePatientInput) => {
@@ -89,7 +90,7 @@ export function CreatePatientDialog({ clients }: CreatePatientDialogProps) {
             <Button type="button" variant="outline" onClick={() => { setOpen(false); reset(); }}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting ? "Guardando..." : "Guardar"}
             </Button>
           </div>

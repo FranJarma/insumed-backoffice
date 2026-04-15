@@ -17,9 +17,10 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    mode: "onChange",
   });
 
   async function onSubmit(data: LoginInput) {
@@ -92,7 +93,7 @@ export default function LoginPage() {
             <p className="text-center text-sm text-destructive">{serverError}</p>
           )}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || !isValid}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

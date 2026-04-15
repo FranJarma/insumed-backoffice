@@ -41,10 +41,11 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
 
   const {
     register, handleSubmit, reset, setValue, watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<CreateCheckInput>({
     resolver: zodResolver(createCheckSchema),
     defaultValues: { issueDate: today, dueDate: today, kind: "COMUN" },
+    mode: "onChange",
   });
 
   const selectedBank = watch("bank");
@@ -253,7 +254,7 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
           </div>
           <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background shrink-0">
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting || isUploading}>
+            <Button type="submit" disabled={isSubmitting || isUploading || !isValid}>
               {isSubmitting ? "Guardando..." : "Guardar Cheque"}
             </Button>
           </div>

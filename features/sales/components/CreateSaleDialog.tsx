@@ -67,10 +67,11 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
 
   const {
     register, handleSubmit, reset, setValue, watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<CreateSaleInput>({
     resolver: zodResolver(createSaleSchema),
     defaultValues,
+    mode: "onChange",
   });
 
   const clientId = watch("clientId");
@@ -266,7 +267,7 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
             {/* Insumos */}
             <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
               <div>
-                <p className="text-sm font-semibold">Insumos</p>
+                <p className="text-sm font-semibold">Insumos <span className="text-destructive">*</span></p>
                 <p className="text-xs text-muted-foreground">
                   {invoiceType === "B"
                     ? "Factura B: se usa el precio con IVA para calcular los subtotales."
@@ -422,7 +423,7 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
 
           <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background shrink-0">
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting || isUploading || items.length === 0}>
+            <Button type="submit" disabled={isSubmitting || isUploading || items.length === 0 || !isValid}>
               {isSubmitting ? "Guardando..." : "Guardar Venta"}
             </Button>
           </div>

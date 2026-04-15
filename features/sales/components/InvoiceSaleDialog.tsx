@@ -51,12 +51,13 @@ export function InvoiceSaleDialog({
     handleSubmit,
     reset,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<InvoiceSaleInput>({
     resolver: zodResolver(invoiceSaleSchema),
     defaultValues: {
       invoiceDate: new Date().toISOString().split("T")[0],
     },
+    mode: "onChange",
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,7 +231,7 @@ export function InvoiceSaleDialog({
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploading}>
+            <Button type="submit" disabled={isSubmitting || isUploading || !isValid}>
               {isSubmitting ? "Guardando..." : "Marcar como Facturada"}
             </Button>
           </div>

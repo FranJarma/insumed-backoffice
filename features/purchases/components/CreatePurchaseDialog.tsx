@@ -44,10 +44,11 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
     reset,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<CreatePurchaseInput>({
     resolver: zodResolver(createPurchaseSchema),
     defaultValues,
+    mode: "onChange",
   });
 
   const providerValue = watch("provider") ?? "";
@@ -225,7 +226,7 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting || isUploading}>
+            <Button type="submit" disabled={isSubmitting || isUploading || !isValid}>
               {isSubmitting ? "Guardando..." : "Guardar"}
             </Button>
           </div>

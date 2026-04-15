@@ -26,9 +26,10 @@ export function CreateClientDialog() {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<CreateClientInput>({
     resolver: zodResolver(createClientSchema),
+    mode: "onChange",
   });
 
   const onSubmit = async (data: CreateClientInput) => {
@@ -78,7 +79,7 @@ export function CreateClientDialog() {
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting ? "Guardando..." : "Guardar"}
             </Button>
           </div>
