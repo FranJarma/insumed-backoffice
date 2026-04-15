@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { createSupplySchema, UNIT_MEASURES, type CreateSupplyInput } from "../types";
+import { createSupplySchema, SUPPLY_CATEGORIES, type CreateSupplyInput } from "../types";
 
 interface SupplyFormProps {
   defaultValues?: Partial<CreateSupplyInput>;
@@ -18,11 +19,22 @@ export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel }: S
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateSupplyInput>({
     resolver: zodResolver(createSupplySchema),
     values: defaultValues as CreateSupplyInput | undefined,
   });
+
+  const unitPrice = watch("unitPrice");
+
+  useEffect(() => {
+    const price = parseFloat(unitPrice);
+    if (!isNaN(price) && price >= 0) {
+      setValue("priceWithVat", (price * 1.21).toFixed(2));
+    }
+  }, [unitPrice, setValue]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -52,7 +64,7 @@ export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel }: S
         <Input id="description" {...register("description")} placeholder="Triple lumen 7Fr x 20cm" />
       </div>
 
-      {/* Precio + Unidad */}
+      {/* Precio Unitario + Precio con IVA */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="unitPrice">
@@ -71,24 +83,47 @@ export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel }: S
           )}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="unitMeasure">
-            Unidad de Medida <span className="text-destructive">*</span>
+          <Label htmlFor="priceWithVat">
+            Precio con IVA ($) <span className="text-muted-foreground text-xs">(opcional)</span>
+          </Label>
+          <Input
+            id="priceWithVat"
+            type="number"
+            step="0.01"
+            min="0"
+            {...register("priceWithVat")}
+            placeholder="15125.00"
+          />
+          {errors.priceWithVat && (
+            <p className="text-xs text-destructive">{errors.priceWithVat.message}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Categoría + Nº Lote */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="category">
+            Categoría <span className="text-muted-foreground text-xs">(opcional)</span>
           </Label>
           <select
-            id="unitMeasure"
-            {...register("unitMeasure")}
+            id="category"
+            {...register("category")}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Seleccionar...</option>
-            {UNIT_MEASURES.map((u) => (
-              <option key={u} value={u}>
-                {u}
+            {SUPPLY_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </select>
-          {errors.unitMeasure && (
-            <p className="text-xs text-destructive">{errors.unitMeasure.message}</p>
-          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="lotNumber">
+            Nº de Lote <span className="text-muted-foreground text-xs">(opcional)</span>
+          </Label>
+          <Input id="lotNumber" {...register("lotNumber")} placeholder="L2024-001" />
         </div>
       </div>
 

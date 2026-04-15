@@ -93,21 +93,21 @@ export function EditPurchaseDialog({ purchase, providers, onOpenChange }: EditPu
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="edit-invoiceNumber">Nº Factura / Ticket</Label>
+              <Label htmlFor="edit-invoiceNumber">Nº Factura / Ticket <span className="text-destructive">*</span></Label>
               <Input id="edit-invoiceNumber" {...register("invoiceNumber")} />
               {errors.invoiceNumber && (
                 <p className="text-xs text-destructive">{errors.invoiceNumber.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="edit-date">Fecha</Label>
+              <Label htmlFor="edit-date">Fecha <span className="text-destructive">*</span></Label>
               <Input id="edit-date" type="date" {...register("date")} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="edit-amount">Monto ($)</Label>
+              <Label htmlFor="edit-amount">Monto ($) <span className="text-destructive">*</span></Label>
               <Input
                 id="edit-amount"
                 type="number"

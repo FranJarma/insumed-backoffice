@@ -54,14 +54,14 @@ export function CreateClientDialog() {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="name">Nombre / Razón Social</Label>
+            <Label htmlFor="name">Nombre / Razón Social <span className="text-destructive">*</span></Label>
             <Input id="name" {...register("name")} placeholder="OSDE" />
             {errors.name && (
               <p className="text-xs text-destructive">{errors.name.message}</p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="cuit">CUIT</Label>
+            <Label htmlFor="cuit">CUIT <span className="text-destructive">*</span></Label>
             <Input id="cuit" {...register("cuit")} placeholder="30-00000000-0" />
             {errors.cuit && (
               <p className="text-xs text-destructive">{errors.cuit.message}</p>
@@ -71,7 +71,10 @@ export function CreateClientDialog() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => { setOpen(false); reset(); }}
+              onClick={() => {
+                setOpen(false);
+                reset();
+              }}
             >
               Cancelar
             </Button>

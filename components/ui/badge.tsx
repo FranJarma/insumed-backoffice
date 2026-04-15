@@ -12,6 +12,8 @@ const badgeVariants = cva(
         destructive: "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
         pending: "border-transparent bg-yellow-100 text-yellow-800",
+        pending_invoice: "border-transparent bg-orange-100 text-orange-700",
+        invoiced: "border-transparent bg-blue-100 text-blue-700",
         paid: "border-transparent bg-green-100 text-green-800",
         cancelled: "border-transparent bg-red-100 text-red-800",
         deposited: "border-transparent bg-blue-100 text-blue-800",

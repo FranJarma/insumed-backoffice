@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { PlusCircle, ImagePlus, X, Loader2, FileText } from "lucide-react";
+import { FileText, ImagePlus, Loader2, PlusCircle, X } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +19,7 @@ import { createPurchase } from "../actions";
 import { createPurchaseSchema, PAYMENT_METHODS, type CreatePurchaseInput } from "../types";
 import type { MockProvider } from "@/db/mock-store";
 import { ProviderAutocomplete } from "./ProviderAutocomplete";
-import { uploadFile, validateFile, fileUrl } from "@/lib/upload";
+import { fileUrl, uploadFile, validateFile } from "@/lib/upload";
 
 interface CreatePurchaseDialogProps {
   providers: MockProvider[];
@@ -35,7 +39,11 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
   const defaultValues = { provider: "", date: new Date().toISOString().split("T")[0], category };
 
   const {
-    register, handleSubmit, reset, setValue, watch,
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreatePurchaseInput>({
     resolver: zodResolver(createPurchaseSchema),
@@ -49,7 +57,11 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
     const file = e.target.files?.[0];
     if (!file) return;
     const err = validateFile(file);
-    if (err) { setRemitoError(err); e.target.value = ""; return; }
+    if (err) {
+      setRemitoError(err);
+      e.target.value = "";
+      return;
+    }
 
     setRemitoError(undefined);
     setIsUploading(true);
@@ -63,7 +75,10 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
       setRemitoName(file.name);
     } catch {
       setRemitoError("Error al subir el archivo. Intente de nuevo.");
-      if (remitoPreview) { URL.revokeObjectURL(remitoPreview); setRemitoPreview(undefined); }
+      if (remitoPreview) {
+        URL.revokeObjectURL(remitoPreview);
+        setRemitoPreview(undefined);
+      }
     } finally {
       setIsUploading(false);
       e.target.value = "";
@@ -90,7 +105,10 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
   };
 
   const handleClose = (isOpen: boolean) => {
-    if (!isOpen) { reset(defaultValues); clearRemito(); }
+    if (!isOpen) {
+      reset(defaultValues);
+      clearRemito();
+    }
     setOpen(isOpen);
   };
 
@@ -124,12 +142,12 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="invoiceNumber">Nº Factura / Ticket</Label>
+              <Label htmlFor="invoiceNumber">Nº Factura / Ticket <span className="text-destructive">*</span></Label>
               <Input id="invoiceNumber" {...register("invoiceNumber")} placeholder="FC-B-10001" />
               {errors.invoiceNumber && <p className="text-xs text-destructive">{errors.invoiceNumber.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="date">Fecha</Label>
+              <Label htmlFor="date">Fecha <span className="text-destructive">*</span></Label>
               <Input id="date" type="date" {...register("date")} />
               {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
             </div>
@@ -137,16 +155,23 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="amount">Monto ($)</Label>
+              <Label htmlFor="amount">Monto ($) <span className="text-destructive">*</span></Label>
               <Input id="amount" type="number" step="0.01" min="0" {...register("amount")} placeholder="95000.00" />
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="paymentMethod">Medio de Pago <span className="text-destructive">*</span></Label>
-              <select id="paymentMethod" {...register("paymentMethod")}
-                className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errors.paymentMethod ? "border-destructive" : ""}`}>
+              <select
+                id="paymentMethod"
+                {...register("paymentMethod")}
+                className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errors.paymentMethod ? "border-destructive" : ""}`}
+              >
                 <option value="">Seleccionar...</option>
-                {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
               </select>
               {errors.paymentMethod && <p className="text-xs text-destructive">{errors.paymentMethod.message}</p>}
             </div>
@@ -157,33 +182,41 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
             <Input id="remito" {...register("remito")} placeholder="R-00001 (opcional)" />
           </div>
 
-          {/* Foto / PDF del remito */}
           <div className="space-y-1.5">
-            <Label>Foto del remito <span className="text-xs text-muted-foreground">(opcional — imagen o PDF)</span></Label>
+            <Label>Foto del remito <span className="text-xs text-muted-foreground">(opcional - imagen o PDF)</span></Label>
             {hasFile ? (
               <div className="relative w-full overflow-hidden rounded-md border">
                 {isImage ? (
                   <img src={remitoPreview} alt="Remito" className="max-h-40 w-full object-contain bg-muted" />
                 ) : (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-muted/50">
+                  <div className="flex items-center gap-3 bg-muted/50 px-4 py-3">
                     <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
                     {remitoKey ? (
-                      <a href={fileUrl(remitoKey)} target="_blank" rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline truncate">{remitoName}</a>
+                      <a
+                        href={fileUrl(remitoKey)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate text-sm text-primary hover:underline"
+                      >
+                        {remitoName}
+                      </a>
                     ) : (
-                      <span className="text-sm text-muted-foreground truncate">{remitoName}</span>
+                      <span className="truncate text-sm text-muted-foreground">{remitoName}</span>
                     )}
                   </div>
                 )}
-                <button type="button" onClick={clearRemito}
-                  className="absolute right-1 top-1 rounded-full bg-background/80 p-1 hover:bg-background">
+                <button
+                  type="button"
+                  onClick={clearRemito}
+                  className="absolute right-1 top-1 rounded-full bg-background/80 p-1 hover:bg-background"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             ) : (
-              <label className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition-colors ${isUploading ? "pointer-events-none opacity-60" : ""}`}>
+              <label className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 ${isUploading ? "pointer-events-none opacity-60" : ""}`}>
                 {isUploading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <ImagePlus className="h-4 w-4 shrink-0" />}
-                <span>{isUploading ? "Subiendo archivo..." : "Imagen (se comprime a 1 MB) · PDF máx. 2 MB"}</span>
+                <span>{isUploading ? "Subiendo archivo..." : "Imagen (se comprime a 1 MB) - PDF máx. 2 MB"}</span>
                 <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileSelect} disabled={isUploading} />
               </label>
             )}

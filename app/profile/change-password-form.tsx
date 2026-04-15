@@ -44,7 +44,7 @@ export function ChangePasswordForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="currentPassword">Contraseña actual</Label>
+        <Label htmlFor="currentPassword">Contraseña actual <span className="text-destructive">*</span></Label>
         <Input
           id="currentPassword"
           type="password"
@@ -57,7 +57,7 @@ export function ChangePasswordForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="newPassword">Nueva contraseña</Label>
+        <Label htmlFor="newPassword">Nueva contraseña <span className="text-destructive">*</span></Label>
         <Input
           id="newPassword"
           type="password"
@@ -70,7 +70,7 @@ export function ChangePasswordForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+        <Label htmlFor="confirmPassword">Confirmar contraseña <span className="text-destructive">*</span></Label>
         <Input
           id="confirmPassword"
           type="password"
@@ -83,7 +83,7 @@ export function ChangePasswordForm() {
       </div>
 
       {success && (
-        <p className="text-sm text-green-600 font-medium">
+        <p className="text-sm font-medium text-green-600">
           Contraseña actualizada correctamente.
         </p>
       )}

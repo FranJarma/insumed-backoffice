@@ -42,14 +42,16 @@ export type MockSale = {
   id: string;
   clientId: string;
   invoiceType: "A" | "B";
-  invoiceNumber: string;
+  invoiceNumber: string | null;
+  invoiceDate: string | null;
   date: string;
   oc: string | null;
   patient: string | null;
   amount: string;
-  status: "PENDING" | "PAID" | "CANCELLED";
+  status: "PENDING_INVOICE" | "PENDING" | "INVOICED" | "PAID" | "CANCELLED";
   documentUrl: string | null;
   creditNoteNumber: string | null;
+  cancellationDate: string | null;
   creditNoteUrl: string | null;
   createdAt: Date;
   deletedAt: Date | null;
@@ -96,9 +98,9 @@ export type MockSaleItem = {
   supplyId: string | null;
   pm: string;
   supplyName: string;
-  unitMeasure: string;
   quantity: string;
   unitPrice: string;
+  priceWithVat: string | null;
   subtotal: string;
   createdAt: Date;
 };
@@ -109,7 +111,9 @@ export type MockSupply = {
   name: string;
   description: string | null;
   unitPrice: string;
-  unitMeasure: string;
+  priceWithVat: string | null;
+  category: string | null;
+  lotNumber: string | null;
   expiryDate: string | null;
   createdAt: Date;
   deletedAt: Date | null;
@@ -129,7 +133,7 @@ type Store = {
 
 declare global {
   // eslint-disable-next-line no-var
-  var __mockStore_v3: Store | undefined;
+  var __mockStore_v4: Store | undefined;
 }
 
 function lastMonth(day: number): string {
@@ -197,7 +201,7 @@ function initStore(): Store {
     { id: "pt16", name: "Castro, Valeria", clientId: "c5", createdAt: new Date("2024-01-01"), deletedAt: null },
   ];
 
-  const sales: MockSale[] = [
+  const sales = ([
     // Mes anterior (marzo)
     { id: "s1", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00001", date: lastMonth(5), oc: "OC-2025-001", patient: "García, Juan Carlos", amount: "185000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
     { id: "s2", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00002", date: lastMonth(8), oc: "OC-2025-002", patient: "López, María Elena", amount: "97500.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
@@ -216,7 +220,11 @@ function initStore(): Store {
     { id: "s14", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00005", date: thisMonth(7), oc: "OC-2025-014", patient: "Álvarez, Claudia", amount: "455000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
     { id: "s15", clientId: "c4", invoiceType: "B", invoiceNumber: "FC-B-00006", date: thisMonth(8), oc: "OC-2025-015", patient: "Vargas, Eduardo", amount: "143000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
     { id: "s16", clientId: "c5", invoiceType: "B", invoiceNumber: "FC-B-00007", date: thisMonth(10), oc: "OC-2025-016", patient: "Castro, Valeria", amount: "275000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-  ];
+  ] satisfies Array<Omit<MockSale, "invoiceDate" | "cancellationDate">>).map((sale) => ({
+    invoiceDate: sale.invoiceNumber ? sale.date : null,
+    cancellationDate: sale.status === "CANCELLED" ? sale.date : null,
+    ...sale,
+  })) satisfies MockSale[];
 
   const purchases: MockPurchase[] = [
     // Mes anterior (marzo)
@@ -265,32 +273,44 @@ function initStore(): Store {
   ];
 
   const supplies: MockSupply[] = [
-    { id: "sp1", pm: "PM-0001", name: "Catéter Venoso Central", description: "Catéter de triple lumen 7Fr x 20cm", unitPrice: "12500.00", unitMeasure: "unidad", expiryDate: "2026-12-31", createdAt: new Date(), deletedAt: null },
-    { id: "sp2", pm: "PM-0002", name: "Guantes de Látex Estériles", description: "Talla M, caja x 100 pares", unitPrice: "4800.00", unitMeasure: "caja", expiryDate: "2026-06-30", createdAt: new Date(), deletedAt: null },
-    { id: "sp3", pm: "PM-0003", name: "Jeringa 10ml", description: "Con aguja 21G, estéril", unitPrice: "350.00", unitMeasure: "unidad", expiryDate: "2027-03-31", createdAt: new Date(), deletedAt: null },
-    { id: "sp4", pm: "PM-0004", name: "Apósito Transparente", description: "10x12cm, film de poliuretano", unitPrice: "2100.00", unitMeasure: "unidad", expiryDate: "2027-01-31", createdAt: new Date(), deletedAt: null },
-    { id: "sp5", pm: "PM-0005", name: "Sonda Nasogástrica N°16", description: "PVC flexible, radio-opaca", unitPrice: "3800.00", unitMeasure: "unidad", expiryDate: "2026-09-30", createdAt: new Date(), deletedAt: null },
-    { id: "sp6", pm: "PM-0006", name: "Suero Fisiológico 500ml", description: "ClNa 0.9% bolsa flexible", unitPrice: "1850.00", unitMeasure: "unidad", expiryDate: "2026-08-31", createdAt: new Date(), deletedAt: null },
-    { id: "sp7", pm: "PM-0007", name: "Gasas Estériles 10x10", description: "Tejido no tejido, paquete x 10", unitPrice: "620.00", unitMeasure: "paquete", expiryDate: null, createdAt: new Date(), deletedAt: null },
-    { id: "sp8", pm: "PM-0008", name: "Equipo de Venoclisis", description: "Con filtro de 15 micras y cámara de goteo", unitPrice: "980.00", unitMeasure: "unidad", expiryDate: "2027-06-30", createdAt: new Date(), deletedAt: null },
+    { id: "sp1", pm: "PM-0001", name: "Catéter Venoso Central", description: "Catéter de triple lumen 7Fr x 20cm", unitPrice: "12500.00", priceWithVat: "15125.00", category: "Descartables", lotNumber: "L2024-001", expiryDate: "2026-12-31", createdAt: new Date(), deletedAt: null },
+    { id: "sp2", pm: "PM-0002", name: "Guantes de Látex Estériles", description: "Talla M, caja x 100 pares", unitPrice: "4800.00", priceWithVat: "5808.00", category: "Descartables", lotNumber: "L2024-002", expiryDate: "2026-06-30", createdAt: new Date(), deletedAt: null },
+    { id: "sp3", pm: "PM-0003", name: "Jeringa 10ml", description: "Con aguja 21G, estéril", unitPrice: "350.00", priceWithVat: "423.50", category: "Descartables", lotNumber: "L2024-003", expiryDate: "2027-03-31", createdAt: new Date(), deletedAt: null },
+    { id: "sp4", pm: "PM-0004", name: "Apósito Transparente", description: "10x12cm, film de poliuretano", unitPrice: "2100.00", priceWithVat: "2541.00", category: "Curaciones", lotNumber: "L2024-004", expiryDate: "2027-01-31", createdAt: new Date(), deletedAt: null },
+    { id: "sp5", pm: "PM-0005", name: "Sonda Nasogástrica N°16", description: "PVC flexible, radio-opaca", unitPrice: "3800.00", priceWithVat: "4598.00", category: "Instrumental", lotNumber: "L2024-005", expiryDate: "2026-09-30", createdAt: new Date(), deletedAt: null },
+    { id: "sp6", pm: "PM-0006", name: "Suero Fisiológico 500ml", description: "ClNa 0.9% bolsa flexible", unitPrice: "1850.00", priceWithVat: "2238.50", category: "Farmacia", lotNumber: "L2024-006", expiryDate: "2026-08-31", createdAt: new Date(), deletedAt: null },
+    { id: "sp7", pm: "PM-0007", name: "Gasas Estériles 10x10", description: "Tejido no tejido, paquete x 10", unitPrice: "620.00", priceWithVat: "750.20", category: "Curaciones", lotNumber: "L2024-007", expiryDate: null, createdAt: new Date(), deletedAt: null },
+    { id: "sp8", pm: "PM-0008", name: "Equipo de Venoclisis", description: "Con filtro de 15 micras y cámara de goteo", unitPrice: "980.00", priceWithVat: "1185.80", category: "Descartables", lotNumber: "L2024-008", expiryDate: "2027-06-30", createdAt: new Date(), deletedAt: null },
   ];
 
   return { banks, clients, providers, patients, sales, purchases, checks, supplies, saleItems: [] };
 }
 
-if (!global.__mockStore_v3) {
-  global.__mockStore_v3 = initStore();
+if (!global.__mockStore_v4) {
+  global.__mockStore_v4 = initStore();
 } else {
   // Migrate store if it was initialized before new fields were added
   const s = initStore();
-  if (!global.__mockStore_v3.banks) global.__mockStore_v3.banks = s.banks;
-  if (!global.__mockStore_v3.providers) global.__mockStore_v3.providers = s.providers;
-  if (!global.__mockStore_v3.checks) global.__mockStore_v3.checks = s.checks;
-  if (!global.__mockStore_v3.patients) global.__mockStore_v3.patients = s.patients;
-  if (!global.__mockStore_v3.supplies) global.__mockStore_v3.supplies = s.supplies;
-  if (!global.__mockStore_v3.saleItems) global.__mockStore_v3.saleItems = [];
+  if (!global.__mockStore_v4.banks) global.__mockStore_v4.banks = s.banks;
+  if (!global.__mockStore_v4.providers) global.__mockStore_v4.providers = s.providers;
+  if (!global.__mockStore_v4.checks) global.__mockStore_v4.checks = s.checks;
+  if (!global.__mockStore_v4.patients) global.__mockStore_v4.patients = s.patients;
+  if (!global.__mockStore_v4.supplies) global.__mockStore_v4.supplies = s.supplies;
+  if (!global.__mockStore_v4.saleItems) global.__mockStore_v4.saleItems = [];
+  // Migrate supplies: add new fields if missing
+  for (const sup of global.__mockStore_v4.supplies) {
+    if (!("priceWithVat" in sup)) (sup as MockSupply).priceWithVat = null;
+    if (!("category" in sup)) (sup as MockSupply).category = null;
+    if (!("lotNumber" in sup)) (sup as MockSupply).lotNumber = null;
+  }
+  // Migrate sales: update status PENDING → INVOICED for backward compat
+  for (const sale of global.__mockStore_v4.sales) {
+    if ((sale.status as string) === "PENDING") sale.status = "INVOICED";
+    sale.invoiceDate ??= sale.invoiceNumber ? sale.date : null;
+    sale.cancellationDate ??= sale.status === "CANCELLED" ? sale.date : null;
+  }
   // Add paymentMethod to any purchases that are missing it
-  for (const p of global.__mockStore_v3.purchases) {
+  for (const p of global.__mockStore_v4.purchases) {
     if (!("paymentMethod" in p)) (p as MockPurchase).paymentMethod = null;
     if (!("remito" in p)) (p as MockPurchase).remito = null;
     if (!("remitoUrl" in p)) (p as MockPurchase).remitoUrl = null;
@@ -298,12 +318,11 @@ if (!global.__mockStore_v3) {
   }
   // Sync invoiceType from fresh initStore data (handles type changes in source)
   for (const freshSale of s.sales) {
-    const existing = global.__mockStore_v3.sales.find((s) => s.id === freshSale.id);
+    const existing = global.__mockStore_v4.sales.find((s) => s.id === freshSale.id);
     if (existing) existing.invoiceType = freshSale.invoiceType;
-    else if (!("invoiceType" in (existing ?? {}))) (existing as unknown as MockSale).invoiceType = "A";
   }
   // Add new check fields to any checks that are missing them
-  for (const c of global.__mockStore_v3.checks) {
+  for (const c of global.__mockStore_v4.checks) {
     if (!("photoUrl" in c)) (c as MockCheck).photoUrl = null;
     if (!("paymentDate" in c)) (c as MockCheck).paymentDate = null;
     if (!("kind" in c)) (c as MockCheck).kind = "COMUN";
@@ -312,21 +331,21 @@ if (!global.__mockStore_v3) {
   }
   // Add deletedAt to all entities that are missing it
   const allEntities = [
-    ...global.__mockStore_v3.banks,
-    ...global.__mockStore_v3.clients,
-    ...global.__mockStore_v3.providers,
-    ...global.__mockStore_v3.patients,
-    ...global.__mockStore_v3.sales,
-    ...global.__mockStore_v3.purchases,
-    ...global.__mockStore_v3.checks,
-    ...(global.__mockStore_v3.supplies ?? []),
+    ...global.__mockStore_v4.banks,
+    ...global.__mockStore_v4.clients,
+    ...global.__mockStore_v4.providers,
+    ...global.__mockStore_v4.patients,
+    ...global.__mockStore_v4.sales,
+    ...global.__mockStore_v4.purchases,
+    ...global.__mockStore_v4.checks,
+    ...(global.__mockStore_v4.supplies ?? []),
   ];
   for (const e of allEntities) {
     if (!("deletedAt" in e)) (e as { deletedAt: null }).deletedAt = null;
   }
 }
 
-export const store = global.__mockStore_v3!;
+export const store = global.__mockStore_v4!;
 
 // ─── Patients ─────────────────────────────────────────────────────────────────
 
@@ -443,20 +462,22 @@ export function mockCreateSale(
   data: {
     clientId: string;
     invoiceType?: "A" | "B";
-    invoiceNumber: string;
+    invoiceNumber?: string;
+    invoiceDate?: string;
     date: string;
     oc?: string;
     patient?: string;
     amount: string;
     documentUrl?: string;
+    isInvoiced?: boolean;
   },
   items: Array<{
     supplyId: string;
     pm: string;
     supplyName: string;
-    unitMeasure: string;
     quantity: string;
     unitPrice: string;
+    priceWithVat?: string;
     subtotal: string;
   }> = []
 ) {
@@ -465,14 +486,16 @@ export function mockCreateSale(
     id: saleId,
     clientId: data.clientId,
     invoiceType: data.invoiceType || "A",
-    invoiceNumber: data.invoiceNumber,
+    invoiceNumber: data.invoiceNumber || null,
+    invoiceDate: data.isInvoiced ? (data.invoiceDate || data.date) : null,
     date: data.date,
     oc: data.oc || null,
     patient: data.patient || null,
     amount: data.amount,
-    status: "PENDING",
+    status: data.isInvoiced ? "INVOICED" : "PENDING_INVOICE",
     documentUrl: data.documentUrl || null,
     creditNoteNumber: null,
+    cancellationDate: null,
     creditNoteUrl: null,
     createdAt: new Date(),
     deletedAt: null,
@@ -484,9 +507,9 @@ export function mockCreateSale(
       supplyId: item.supplyId || null,
       pm: item.pm,
       supplyName: item.supplyName,
-      unitMeasure: item.unitMeasure,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
+      priceWithVat: item.priceWithVat || null,
       subtotal: item.subtotal,
       createdAt: new Date(),
     });
@@ -494,11 +517,26 @@ export function mockCreateSale(
 }
 export function mockUpdateSale(
   id: string,
-  data: { clientId: string; invoiceType: "A" | "B"; invoiceNumber: string; date: string; oc?: string; patient?: string; amount: string; },
-  items: Array<{ supplyId: string; pm: string; supplyName: string; unitMeasure: string; quantity: string; unitPrice: string; subtotal: string; }> = []
+  data: { clientId: string; invoiceType: "A" | "B"; invoiceNumber?: string; invoiceDate?: string; date: string; oc?: string; patient?: string; amount: string; documentUrl?: string; isInvoiced?: boolean; },
+  items: Array<{ supplyId: string; pm: string; supplyName: string; quantity: string; unitPrice: string; priceWithVat?: string; subtotal: string; }> = []
 ) {
   const s = store.sales.find((s) => s.id === id);
-  if (s) Object.assign(s, { ...data, oc: data.oc || null, patient: data.patient || null });
+  if (s) {
+    Object.assign(s, {
+      clientId: data.clientId,
+      invoiceType: data.invoiceType,
+      invoiceNumber: data.invoiceNumber || null,
+      invoiceDate: data.isInvoiced ? (data.invoiceDate || s.invoiceDate || data.date) : null,
+      date: data.date,
+      oc: data.oc || null,
+      patient: data.patient || null,
+      amount: data.amount,
+      documentUrl: data.documentUrl || null,
+    });
+    if (s.status === "PENDING_INVOICE" || s.status === "INVOICED") {
+      s.status = data.isInvoiced ? "INVOICED" : "PENDING_INVOICE";
+    }
+  }
   // Replace items
   store.saleItems = store.saleItems.filter((i) => i.saleId !== id);
   for (const item of items) {
@@ -508,12 +546,21 @@ export function mockUpdateSale(
       supplyId: item.supplyId || null,
       pm: item.pm,
       supplyName: item.supplyName,
-      unitMeasure: item.unitMeasure,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
+      priceWithVat: item.priceWithVat || null,
       subtotal: item.subtotal,
       createdAt: new Date(),
     });
+  }
+}
+export function mockMarkSaleAsInvoiced(id: string, data: { invoiceNumber: string; invoiceDate: string; documentUrl?: string }) {
+  const s = store.sales.find((s) => s.id === id);
+  if (s) {
+    s.status = "INVOICED";
+    s.invoiceNumber = data.invoiceNumber;
+    s.invoiceDate = data.invoiceDate;
+    if (data.documentUrl) s.documentUrl = data.documentUrl;
   }
 }
 export function mockSoftDeleteSale(id: string) {
@@ -524,11 +571,13 @@ export function mockMarkSaleAsPaid(id: string) {
   const s = store.sales.find((s) => s.id === id);
   if (s) s.status = "PAID";
 }
-export function mockCancelSale(id: string, data: { creditNoteNumber: string; creditNoteUrl?: string }) {
+
+export function mockCancelSale(id: string, data: { creditNoteNumber: string; cancellationDate: string; creditNoteUrl?: string }) {
   const s = store.sales.find((s) => s.id === id);
   if (s) {
     s.status = "CANCELLED";
     s.creditNoteNumber = data.creditNoteNumber;
+    s.cancellationDate = data.cancellationDate;
     s.creditNoteUrl = data.creditNoteUrl ?? null;
   }
 }
@@ -661,7 +710,7 @@ export function mockGetDashboardData(monthStart: string, monthEnd: string) {
   );
   const totalPurchasesMonth = purchasesThisMonth.reduce((sum, p) => sum + parseFloat(p.amount), 0);
 
-  const pendingSales = store.sales.filter((s) => s.status === "PENDING");
+  const pendingSales = store.sales.filter((s) => s.status === "INVOICED" || s.status === "PENDING_INVOICE" || s.status === "PENDING");
   const totalPending = pendingSales.reduce((sum, s) => sum + parseFloat(s.amount), 0);
 
   const clientTotals: Record<string, number> = {};
@@ -685,7 +734,7 @@ export function mockGetSupplies(): MockSupply[] {
 }
 export function mockCreateSupply(data: {
   pm: string; name: string; description?: string;
-  unitPrice: string; unitMeasure: string; expiryDate?: string;
+  unitPrice: string; priceWithVat?: string; category?: string; lotNumber?: string; expiryDate?: string;
 }): MockSupply {
   const s: MockSupply = {
     id: crypto.randomUUID(),
@@ -693,7 +742,9 @@ export function mockCreateSupply(data: {
     name: data.name,
     description: data.description || null,
     unitPrice: data.unitPrice,
-    unitMeasure: data.unitMeasure,
+    priceWithVat: data.priceWithVat || null,
+    category: data.category || null,
+    lotNumber: data.lotNumber || null,
     expiryDate: data.expiryDate || null,
     createdAt: new Date(),
     deletedAt: null,
@@ -703,7 +754,7 @@ export function mockCreateSupply(data: {
 }
 export function mockUpdateSupply(id: string, data: {
   pm: string; name: string; description?: string;
-  unitPrice: string; unitMeasure: string; expiryDate?: string;
+  unitPrice: string; priceWithVat?: string; category?: string; lotNumber?: string; expiryDate?: string;
 }) {
   const s = store.supplies.find((s) => s.id === id);
   if (s) Object.assign(s, {
@@ -711,7 +762,9 @@ export function mockUpdateSupply(id: string, data: {
     name: data.name,
     description: data.description || null,
     unitPrice: data.unitPrice,
-    unitMeasure: data.unitMeasure,
+    priceWithVat: data.priceWithVat || null,
+    category: data.category || null,
+    lotNumber: data.lotNumber || null,
     expiryDate: data.expiryDate || null,
   });
 }

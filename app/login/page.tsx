@@ -34,7 +34,6 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/20">
       <div className="w-full max-w-sm space-y-8 px-4">
-        {/* Logo */}
         <div className="flex flex-col items-center gap-2">
           <img
             src="/logo.webp"
@@ -51,10 +50,9 @@ export default function LoginPage() {
           </span>
         </div>
 
-        {/* Formulario */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Usuario</Label>
+            <Label htmlFor="username">Usuario <span className="text-destructive">*</span></Label>
             <Input
               id="username"
               autoComplete="username"
@@ -67,7 +65,7 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <Label htmlFor="password">Contraseña <span className="text-destructive">*</span></Label>
             <div className="relative">
               <Input
                 id="password"
@@ -91,7 +89,7 @@ export default function LoginPage() {
           </div>
 
           {serverError && (
-            <p className="text-sm text-destructive text-center">{serverError}</p>
+            <p className="text-center text-sm text-destructive">{serverError}</p>
           )}
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>

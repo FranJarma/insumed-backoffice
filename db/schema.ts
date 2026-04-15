@@ -12,7 +12,7 @@ import {
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
 export const userRole = pgEnum("user_role", ["jefe", "operario", "admin"]);
-export const saleStatus = pgEnum("sale_status", ["PENDING", "PAID", "CANCELLED"]);
+export const saleStatus = pgEnum("sale_status", ["PENDING_INVOICE", "PENDING", "INVOICED", "PAID", "CANCELLED"]);
 export const invoiceType = pgEnum("invoice_type", ["A", "B"]);
 export const purchaseStatus = pgEnum("purchase_status", ["PENDING", "PAID"]);
 export const purchaseCategory = pgEnum("purchase_category", ["PROVEEDOR", "VARIOS"]);
@@ -79,14 +79,16 @@ export const sales = pgTable("sales", {
     .references(() => clients.id)
     .notNull(),
   invoiceType: invoiceType("invoice_type").default("A").notNull(),
-  invoiceNumber: text("invoice_number").notNull(),
+  invoiceNumber: text("invoice_number"),
+  invoiceDate: date("invoice_date"),
   date: date("date").notNull(),
   oc: text("oc"),
   patient: text("patient"),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  status: saleStatus("status").default("PENDING").notNull(),
+  status: saleStatus("status").default("PENDING_INVOICE").notNull(),
   documentUrl: text("document_url"),
   creditNoteNumber: text("credit_note_number"),
+  cancellationDate: date("cancellation_date"),
   creditNoteUrl: text("credit_note_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
@@ -113,7 +115,9 @@ export const supplies = pgTable("supplies", {
   name: text("name").notNull(),
   description: text("description"),
   unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
-  unitMeasure: text("unit_measure").notNull(),
+  priceWithVat: numeric("price_with_vat", { precision: 12, scale: 2 }),
+  category: text("category"),
+  lotNumber: text("lot_number"),
   expiryDate: date("expiry_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
@@ -125,9 +129,9 @@ export const saleItems = pgTable("sale_items", {
   supplyId: uuid("supply_id").references(() => supplies.id),
   pm: text("pm").notNull(),
   supplyName: text("supply_name").notNull(),
-  unitMeasure: text("unit_measure").notNull(),
   quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull(),
   unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+  priceWithVat: numeric("price_with_vat", { precision: 12, scale: 2 }),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -34,12 +34,12 @@ type PurchaseRow = {
 type SaleRow = {
   clientName: string | null;
   invoiceType: "A" | "B";
-  invoiceNumber: string;
+  invoiceNumber: string | null;
   date: string;
   oc: string | null;
   patient: string | null;
   amount: string;
-  status: "PENDING" | "PAID" | "CANCELLED";
+  status: "PENDING_INVOICE" | "PENDING" | "INVOICED" | "PAID" | "CANCELLED";
   items?: Array<{ supplyName: string; quantity: string }>;
 };
 
@@ -49,7 +49,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   EFECTIVO: "Efectivo",
 };
 const PURCHASE_STATUS: Record<string, string> = { PENDING: "Pendiente", PAID: "Pagado" };
-const SALE_STATUS: Record<string, string> = { PENDING: "A Cobrar", PAID: "Cobrado", CANCELLED: "Anulado" };
+const SALE_STATUS: Record<string, string> = { PENDING_INVOICE: "Pend. Facturar", PENDING: "Facturada", INVOICED: "Facturada", PAID: "Facturada", CANCELLED: "Anulada" };
 
 // ─── Purchases Excel ─────────────────────────────────────────────────────────
 
@@ -138,7 +138,7 @@ export function downloadSalesExcel(
   const data = sales.map((s) => ({
     Cliente: s.clientName ?? "",
     "Tipo Factura": `Factura ${s.invoiceType}`,
-    "Nº Factura": s.invoiceNumber,
+    "Nº Factura": s.invoiceNumber ?? "",
     Fecha: formatDate(s.date),
     Paciente: s.patient ?? "",
     OC: s.oc ?? "",
@@ -181,7 +181,7 @@ export function downloadSalesPdf(
     .filter((s) => s.status === "PAID")
     .reduce((sum, s) => sum + parseFloat(s.amount), 0);
   const totalPending = sales
-    .filter((s) => s.status === "PENDING")
+    .filter((s) => s.status === "INVOICED" || s.status === "PENDING" || s.status === "PENDING_INVOICE")
     .reduce((sum, s) => sum + parseFloat(s.amount), 0);
 
   autoTable(doc, {
@@ -191,7 +191,7 @@ export function downloadSalesPdf(
       ...sales.map((s) => [
         s.clientName ?? "—",
         `Factura ${s.invoiceType}`,
-        s.invoiceNumber,
+        s.invoiceNumber ?? "—",
         formatDate(s.date),
         s.patient ?? "—",
         s.oc ?? "—",
@@ -201,8 +201,8 @@ export function downloadSalesPdf(
         formatCurrency(s.amount),
         SALE_STATUS[s.status] ?? s.status,
       ]),
-      ["", "", "", "", "", "Subtotal Cobrado", "", formatCurrency(totalPaid), ""],
-      ["", "", "", "", "", "Subtotal Pendiente", "", formatCurrency(totalPending), ""],
+      ["", "", "", "", "", "Subtotal Facturadas", "", formatCurrency(totalPaid), ""],
+      ["", "", "", "", "", "Subtotal Pend. Facturar", "", formatCurrency(totalPending), ""],
       ["", "", "", "", "", "Total", "", formatCurrency(totalPaid + totalPending), ""],
     ],
     styles: { fontSize: 9 },

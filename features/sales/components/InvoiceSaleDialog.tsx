@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, FileText, ImagePlus, Loader2, X } from "lucide-react";
+import { FileText, ImagePlus, Loader2, Receipt, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,29 +15,35 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cancelSale } from "../actions";
-import { cancelSaleSchema, type CancelSaleInput } from "../types";
+import { markSaleAsInvoiced } from "../actions";
 import { fileUrl, uploadFile, validateFile } from "@/lib/upload";
 
-interface CancelSaleDialogProps {
+const invoiceSaleSchema = z.object({
+  invoiceNumber: z.string().min(1, "El número de factura es requerido"),
+  invoiceDate: z.string().min(1, "La fecha de facturación es requerida"),
+  documentUrl: z.string().optional(),
+});
+
+type InvoiceSaleInput = z.infer<typeof invoiceSaleSchema>;
+
+interface InvoiceSaleDialogProps {
   saleId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-export function CancelSaleDialog({
+export function InvoiceSaleDialog({
   saleId,
   open,
   onOpenChange,
   onSuccess,
-}: CancelSaleDialogProps) {
-  const [creditNoteKey, setCreditNoteKey] = useState<string | undefined>();
-  const [creditNotePreview, setCreditNotePreview] = useState<string | undefined>();
-  const [creditNoteName, setCreditNoteName] = useState<string | undefined>();
+}: InvoiceSaleDialogProps) {
+  const [documentKey, setDocumentKey] = useState<string | undefined>();
+  const [documentPreview, setDocumentPreview] = useState<string | undefined>();
+  const [documentName, setDocumentName] = useState<string | undefined>();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -45,17 +52,16 @@ export function CancelSaleDialog({
     reset,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<CancelSaleInput>({
-    resolver: zodResolver(cancelSaleSchema),
+  } = useForm<InvoiceSaleInput>({
+    resolver: zodResolver(invoiceSaleSchema),
     defaultValues: {
-      cancellationDate: new Date().toISOString().split("T")[0],
+      invoiceDate: new Date().toISOString().split("T")[0],
     },
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!fileInputRef.current) return;
-    fileInputRef.current.value = "";
+    if (fileInputRef.current) fileInputRef.current.value = "";
     if (!file) return;
 
     const validationError = validateFile(file);
@@ -65,10 +71,9 @@ export function CancelSaleDialog({
     }
 
     setUploadError(null);
-    setCreditNoteName(file.name);
-
+    setDocumentName(file.name);
     if (file.type.startsWith("image/")) {
-      setCreditNotePreview(URL.createObjectURL(file));
+      setDocumentPreview(URL.createObjectURL(file));
     }
 
     setIsUploading(true);
@@ -77,8 +82,8 @@ export function CancelSaleDialog({
         directory: "facturas",
         date: new Date().toISOString().slice(0, 10),
       });
-      setCreditNoteKey(key);
-      setValue("creditNoteUrl", key);
+      setDocumentKey(key);
+      setValue("documentUrl", key);
     } catch {
       setUploadError("Error al subir el archivo. Intentá de nuevo.");
     } finally {
@@ -87,81 +92,83 @@ export function CancelSaleDialog({
   };
 
   const clearFile = () => {
-    if (creditNotePreview) URL.revokeObjectURL(creditNotePreview);
-    setCreditNoteKey(undefined);
-    setCreditNotePreview(undefined);
-    setCreditNoteName(undefined);
-    setValue("creditNoteUrl", undefined);
+    if (documentPreview) URL.revokeObjectURL(documentPreview);
+    setDocumentKey(undefined);
+    setDocumentPreview(undefined);
+    setDocumentName(undefined);
+    setValue("documentUrl", undefined);
   };
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
       clearFile();
-      setSubmitError(null);
-      reset({ cancellationDate: new Date().toISOString().split("T")[0] });
+      reset({ invoiceDate: new Date().toISOString().split("T")[0] });
+      setUploadError(null);
     }
     onOpenChange(isOpen);
   };
 
-  const onSubmit = async (data: CancelSaleInput) => {
+  const onSubmit = async (data: InvoiceSaleInput) => {
     if (!saleId) return;
-    setSubmitError(null);
-    const result = await cancelSale(saleId, data);
+    const result = await markSaleAsInvoiced(saleId, {
+      invoiceNumber: data.invoiceNumber,
+      invoiceDate: data.invoiceDate,
+      documentUrl: data.documentUrl,
+    });
     if ("success" in result) {
       clearFile();
-      reset({ cancellationDate: new Date().toISOString().split("T")[0] });
+      reset({ invoiceDate: new Date().toISOString().split("T")[0] });
       onSuccess();
-      return;
     }
-    const formError = "error" in result && result.error && "_form" in result.error
-      ? result.error._form?.[0]
-      : undefined;
-    if (formError) setSubmitError(formError);
   };
 
-  const isPdf = creditNoteName?.toLowerCase().endsWith(".pdf");
+  const isPdf = documentName?.toLowerCase().endsWith(".pdf");
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            Anular Factura
+          <DialogTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            Registrar Factura
           </DialogTitle>
           <DialogDescription>
-            Esta acción anulará la factura. Se requiere el número y la fecha de la nota de crédito correspondiente.
+            Ingresá el número, la fecha de facturación y el comprobante para marcar la venta como facturada.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {submitError && <p className="text-sm text-destructive">{submitError}</p>}
 
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="creditNoteNumber">Número de Nota de Crédito <span className="text-destructive">*</span></Label>
+            <Label htmlFor="invoiceNumber">
+              N° de Factura <span className="text-destructive">*</span>
+            </Label>
             <Input
-              id="creditNoteNumber"
-              {...register("creditNoteNumber")}
-              placeholder="NC-A-00001"
+              id="invoiceNumber"
+              {...register("invoiceNumber")}
+              placeholder="00001-00000001"
+              autoFocus
             />
-            {errors.creditNoteNumber && (
-              <p className="text-xs text-destructive">{errors.creditNoteNumber.message}</p>
+            {errors.invoiceNumber && (
+              <p className="text-xs text-destructive">{errors.invoiceNumber.message}</p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="cancellationDate">Fecha de Anulación <span className="text-destructive">*</span></Label>
-            <Input id="cancellationDate" type="date" {...register("cancellationDate")} />
-            {errors.cancellationDate && (
-              <p className="text-xs text-destructive">{errors.cancellationDate.message}</p>
+            <Label htmlFor="invoiceDate">
+              Fecha de Facturación <span className="text-destructive">*</span>
+            </Label>
+            <Input id="invoiceDate" type="date" {...register("invoiceDate")} />
+            {errors.invoiceDate && (
+              <p className="text-xs text-destructive">{errors.invoiceDate.message}</p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <Label>
-              Archivo de Nota de Crédito <span className="text-xs text-muted-foreground">(opcional)</span>
+              Comprobante <span className="text-xs text-muted-foreground">(opcional - imagen o PDF)</span>
             </Label>
 
-            {!creditNoteKey && !isUploading && (
+            {!documentKey && !isUploading && (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -179,7 +186,7 @@ export function CancelSaleDialog({
               </div>
             )}
 
-            {creditNoteKey && !isUploading && (
+            {documentKey && !isUploading && (
               <div className="relative rounded-md border bg-muted/30 p-2">
                 <button
                   type="button"
@@ -190,16 +197,20 @@ export function CancelSaleDialog({
                 </button>
                 {isPdf ? (
                   <a
-                    href={fileUrl(creditNoteKey)}
+                    href={fileUrl(documentKey)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 px-1 text-sm text-blue-600 hover:underline"
                   >
                     <FileText className="h-4 w-4 shrink-0" />
-                    {creditNoteName}
+                    {documentName}
                   </a>
-                ) : creditNotePreview ? (
-                  <img src={creditNotePreview} alt="Preview" className="max-h-32 w-full rounded object-contain" />
+                ) : documentPreview ? (
+                  <img
+                    src={documentPreview}
+                    alt="Preview"
+                    className="max-h-40 w-full rounded object-contain"
+                  />
                 ) : null}
               </div>
             )}
@@ -219,8 +230,8 @@ export function CancelSaleDialog({
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>
               Cancelar
             </Button>
-            <Button type="submit" variant="destructive" disabled={isSubmitting || isUploading}>
-              {isSubmitting ? "Anulando..." : "Confirmar Anulación"}
+            <Button type="submit" disabled={isSubmitting || isUploading}>
+              {isSubmitting ? "Guardando..." : "Marcar como Facturada"}
             </Button>
           </div>
         </form>

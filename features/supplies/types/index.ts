@@ -1,15 +1,12 @@
 import { z } from "zod";
 
-export const UNIT_MEASURES = [
-  "unidad",
-  "caja",
-  "paquete",
-  "frasco",
-  "ampolla",
-  "sobre",
-  "rollo",
-  "par",
-  "kit",
+export const SUPPLY_CATEGORIES = [
+  "Descartables",
+  "Curaciones",
+  "Farmacia",
+  "Instrumental",
+  "Equipamiento",
+  "Varios",
 ] as const;
 
 export const createSupplySchema = z.object({
@@ -18,9 +15,14 @@ export const createSupplySchema = z.object({
   description: z.string().optional(),
   unitPrice: z
     .string()
-    .min(1, "El precio es requerido")
+    .min(1, "El precio unitario es requerido")
     .refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, "Precio inválido"),
-  unitMeasure: z.string().min(1, "La unidad de medida es requerida"),
+  priceWithVat: z
+    .string()
+    .optional()
+    .refine((v) => !v || (!isNaN(parseFloat(v)) && parseFloat(v) >= 0), "Precio con IVA inválido"),
+  category: z.string().optional(),
+  lotNumber: z.string().optional(),
   expiryDate: z.string().optional(),
 });
 

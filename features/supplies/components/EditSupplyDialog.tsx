@@ -43,7 +43,9 @@ export function EditSupplyDialog({ supply, onOpenChange }: EditSupplyDialogProps
                   name: supply.name,
                   description: supply.description ?? "",
                   unitPrice: supply.unitPrice,
-                  unitMeasure: supply.unitMeasure,
+                  priceWithVat: supply.priceWithVat ?? "",
+                  category: supply.category ?? "",
+                  lotNumber: supply.lotNumber ?? "",
                   expiryDate: supply.expiryDate ?? "",
                 }
               : undefined

@@ -28,8 +28,8 @@ interface CreateSaleDialogProps {
 }
 
 type ItemDraft = {
-  supplyId: string; pm: string; supplyName: string; unitMeasure: string;
-  quantity: number; unitPrice: number; subtotal: number;
+  supplyId: string; pm: string; supplyName: string;
+  quantity: number; unitPrice: number; priceWithVat: number | null; subtotal: number;
 };
 
 const INVOICE_TYPES = [
@@ -37,10 +37,15 @@ const INVOICE_TYPES = [
   { value: "B", label: "Factura B" },
 ] as const;
 
+function calcSubtotal(item: Omit<ItemDraft, "subtotal">, invoiceType: "A" | "B"): number {
+  const price = invoiceType === "B" && item.priceWithVat != null ? item.priceWithVat : item.unitPrice;
+  return parseFloat((item.quantity * price).toFixed(2));
+}
+
 export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDialogProps) {
   const [open, setOpen] = useState(false);
   const [documentKey, setDocumentKey] = useState<string | undefined>();
-  const [documentPreview, setDocumentPreview] = useState<string | undefined>(); // local object URL for preview only
+  const [documentPreview, setDocumentPreview] = useState<string | undefined>();
   const [documentName, setDocumentName] = useState<string | undefined>();
   const [documentError, setDocumentError] = useState<string | undefined>();
   const [isUploading, setIsUploading] = useState(false);
@@ -52,12 +57,12 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
   const [itemQty, setItemQty] = useState("1");
   const [itemError, setItemError] = useState("");
 
-  const itemsTotal = items.reduce((sum, i) => sum + i.subtotal, 0);
-
   const defaultValues: Partial<CreateSaleInput> = {
     clientId: "",
     date: new Date().toISOString().split("T")[0],
+    invoiceDate: new Date().toISOString().split("T")[0],
     invoiceType: "A",
+    isInvoiced: false,
   };
 
   const {
@@ -70,7 +75,25 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
 
   const clientId = watch("clientId");
   const invoiceType = watch("invoiceType");
+  const isInvoiced = watch("isInvoiced");
   const watchDate = watch("date");
+
+  const itemsTotal = items.reduce((sum, i) => sum + i.subtotal, 0);
+
+  const recalcItems = (newInvoiceType: "A" | "B", currentItems: ItemDraft[]) => {
+    return currentItems.map((item) => ({
+      ...item,
+      subtotal: calcSubtotal(item, newInvoiceType),
+    }));
+  };
+
+  const handleInvoiceTypeChange = (type: "A" | "B") => {
+    setValue("invoiceType", type, { shouldValidate: true });
+    const updated = recalcItems(type, items);
+    setItems(updated);
+    const total = updated.reduce((s, i) => s + i.subtotal, 0);
+    if (updated.length > 0) setValue("amount", total.toFixed(2), { shouldValidate: true });
+  };
 
   const handleAddItem = () => {
     setItemError("");
@@ -79,8 +102,10 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
     const qty = parseFloat(itemQty);
     if (!qty || qty <= 0) { setItemError("Cantidad inválida"); return; }
     const unitPrice = parseFloat(supply.unitPrice);
-    const subtotal = parseFloat((qty * unitPrice).toFixed(2));
-    const newItems = [...items, { supplyId: supply.id, pm: supply.pm, supplyName: supply.name, unitMeasure: supply.unitMeasure, quantity: qty, unitPrice, subtotal }];
+    const priceWithVat = supply.priceWithVat ? parseFloat(supply.priceWithVat) : null;
+    const draft: Omit<ItemDraft, "subtotal"> = { supplyId: supply.id, pm: supply.pm, supplyName: supply.name, quantity: qty, unitPrice, priceWithVat };
+    const subtotal = calcSubtotal(draft, invoiceType);
+    const newItems = [...items, { ...draft, subtotal }];
     setItems(newItems);
     setSelectedSupplyId("");
     setItemQty("1");
@@ -90,6 +115,7 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
   const handleRemoveItem = (index: number) => {
     const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
+    setItemError(newItems.length === 0 ? "Agregá al menos un insumo para continuar." : "");
     setValue("amount", newItems.length > 0 ? newItems.reduce((s, i) => s + i.subtotal, 0).toFixed(2) : "", { shouldValidate: newItems.length > 0 });
   };
 
@@ -101,7 +127,6 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
 
     setDocumentError(undefined);
     setIsUploading(true);
-    // Local preview immediately (images only)
     if (file.type.startsWith("image/")) {
       setDocumentPreview(URL.createObjectURL(file));
     }
@@ -131,9 +156,15 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
   };
 
   const onSubmit = async (data: CreateSaleInput) => {
+    if (items.length === 0) {
+      setItemError("Agregá al menos un insumo para continuar.");
+      return;
+    }
     const saleItemInputs: SaleItemInput[] = items.map((i) => ({
-      supplyId: i.supplyId, pm: i.pm, supplyName: i.supplyName, unitMeasure: i.unitMeasure,
-      quantity: i.quantity.toString(), unitPrice: i.unitPrice.toString(), subtotal: i.subtotal.toString(),
+      supplyId: i.supplyId, pm: i.pm, supplyName: i.supplyName,
+      quantity: i.quantity.toString(), unitPrice: i.unitPrice.toString(),
+      priceWithVat: (i.priceWithVat ?? i.unitPrice).toString(),
+      subtotal: i.subtotal.toString(),
     }));
     const result = await createSale({ ...data, documentUrl: documentKey }, saleItemInputs);
     if ("success" in result) {
@@ -144,7 +175,12 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
       setSelectedSupplyId("");
       setItemQty("1");
       router.refresh();
+      return;
     }
+    const itemsError = "error" in result && result.error && "items" in result.error
+      ? result.error.items?.[0]
+      : undefined;
+    if (itemsError) setItemError(itemsError);
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -161,6 +197,7 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
 
   const hasFile = documentKey || documentPreview;
   const isImage = hasFile && !documentName?.endsWith(".pdf");
+  const priceCol = invoiceType === "B" ? "P. c/IVA" : "P. Unit.";
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -188,24 +225,19 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
               {errors.clientId && <p className="text-xs text-destructive">{errors.clientId.message}</p>}
             </div>
 
-            {/* Tipo + Nº Factura + Fecha */}
-            <div className="grid grid-cols-[auto_1fr_1fr] gap-3 items-start">
+            {/* Tipo + Fecha */}
+            <div className="grid grid-cols-[auto_1fr] gap-3 items-start">
               <div className="space-y-1.5">
                 <Label>Tipo <span className="text-destructive">*</span></Label>
                 <div className="flex gap-1.5">
                   {INVOICE_TYPES.map((t) => (
                     <button key={t.value} type="button"
-                      onClick={() => setValue("invoiceType", t.value, { shouldValidate: true })}
+                      onClick={() => handleInvoiceTypeChange(t.value)}
                       className={`w-10 rounded-md border py-1.5 text-sm font-semibold transition-colors ${
                         invoiceType === t.value ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-muted"
                       }`}>{t.value}</button>
                   ))}
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="invoiceNumber">Nº Factura <span className="text-destructive">*</span></Label>
-                <Input id="invoiceNumber" {...register("invoiceNumber")} placeholder="00001" />
-                {errors.invoiceNumber && <p className="text-xs text-destructive">{errors.invoiceNumber.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="date">Fecha</Label>
@@ -235,20 +267,29 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
             <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
               <div>
                 <p className="text-sm font-semibold">Insumos</p>
-                <p className="text-xs text-muted-foreground">Podés agregar varios insumos. El monto se calcula automáticamente.</p>
+                <p className="text-xs text-muted-foreground">
+                  {invoiceType === "B"
+                    ? "Factura B: se usa el precio con IVA para calcular los subtotales."
+                    : "Factura A: se usa el precio unitario para calcular los subtotales."}
+                </p>
               </div>
               <div className="space-y-2">
                 <select value={selectedSupplyId} onChange={(e) => { setSelectedSupplyId(e.target.value); setItemError(""); }}
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                   <option value="">Seleccionar insumo por PM o nombre...</option>
-                  {supplies.map((s) => (
-                    <option key={s.id} value={s.id}>{s.pm} — {s.name} ({s.unitMeasure}) · {formatCurrency(s.unitPrice)}</option>
-                  ))}
+                  {supplies.map((s) => {
+                    const displayPrice = invoiceType === "B" && s.priceWithVat ? s.priceWithVat : s.unitPrice;
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {s.pm} — {s.name}{s.category ? ` (${s.category})` : ""} · {formatCurrency(displayPrice)}
+                      </option>
+                    );
+                  })}
                 </select>
                 <div className="flex items-end gap-2">
                   <div className="space-y-1.5">
-                    <Label>Cantidad</Label>
-                    <Input type="number" min="0.01" step="0.01" value={itemQty} onChange={(e) => setItemQty(e.target.value)} placeholder="1" className="w-28" />
+                    <Label>Cantidad (lotes)</Label>
+                    <Input type="number" min="1" step="1" value={itemQty} onChange={(e) => setItemQty(e.target.value)} placeholder="1" className="w-28" />
                   </div>
                   <Button type="button" variant="default" size="sm" onClick={handleAddItem} className="mb-0.5">
                     <Plus className="h-4 w-4" />Agregar insumo
@@ -264,26 +305,29 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
                     <thead>
                       <tr className="border-b bg-muted/50 text-xs text-muted-foreground">
                         <th className="px-3 py-2 text-left">PM</th><th className="px-3 py-2 text-left">Insumo</th>
-                        <th className="px-3 py-2 text-right">Cant.</th><th className="px-3 py-2 text-right">P.Unit.</th>
+                        <th className="px-3 py-2 text-right">Lotes</th><th className="px-3 py-2 text-right">{priceCol}</th>
                         <th className="px-3 py-2 text-right">Subtotal</th><th className="w-9" />
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((item, i) => (
-                        <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
-                          <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{item.pm}</td>
-                          <td className="px-3 py-2">{item.supplyName}</td>
-                          <td className="px-3 py-2 text-right tabular-nums">{item.quantity} {item.unitMeasure}</td>
-                          <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{formatCurrency(item.unitPrice)}</td>
-                          <td className="px-3 py-2 text-right font-medium tabular-nums">{formatCurrency(item.subtotal)}</td>
-                          <td className="px-2 text-center">
-                            <button type="button" onClick={() => handleRemoveItem(i)}
-                              className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {items.map((item, i) => {
+                        const displayPrice = invoiceType === "B" && item.priceWithVat != null ? item.priceWithVat : item.unitPrice;
+                        return (
+                          <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{item.pm}</td>
+                            <td className="px-3 py-2">{item.supplyName}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{item.quantity}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{formatCurrency(displayPrice)}</td>
+                            <td className="px-3 py-2 text-right font-medium tabular-nums">{formatCurrency(item.subtotal)}</td>
+                            <td className="px-2 text-center">
+                              <button type="button" onClick={() => handleRemoveItem(i)}
+                                className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot>
                       <tr className="border-t bg-muted/30">
@@ -309,44 +353,76 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
 
-            {/* Foto / PDF de la factura */}
-            <div className="space-y-1.5">
-              <Label>Factura <span className="text-xs text-muted-foreground">(opcional — imagen o PDF)</span></Label>
-              {hasFile ? (
-                <div className="relative w-full overflow-hidden rounded-md border">
-                  {isImage ? (
-                    <img src={documentPreview} alt="Factura" className="max-h-48 w-full object-contain bg-muted" />
-                  ) : (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-muted/50">
-                      <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
-                      {documentKey ? (
-                        <a href={fileUrl(documentKey)} target="_blank" rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline truncate">{documentName}</a>
-                      ) : (
-                        <span className="text-sm text-muted-foreground truncate">{documentName}</span>
-                      )}
-                    </div>
-                  )}
-                  <button type="button" onClick={clearDocument}
-                    className="absolute right-2 top-2 rounded-full bg-background/90 p-1 hover:bg-background shadow-sm">
-                    <X className="h-4 w-4" />
-                  </button>
+            {/* Checkbox "Venta facturada" */}
+            <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register("isInvoiced")}
+                  className="h-4 w-4 rounded border-gray-300 accent-primary"
+                />
+                <div>
+                  <span className="text-sm font-medium">Venta facturada</span>
+                  <p className="text-xs text-muted-foreground">Marcá si la factura ya fue emitida. Podés cargar el número y el comprobante.</p>
                 </div>
-              ) : (
-                <label className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition-colors ${isUploading ? "pointer-events-none opacity-60" : ""}`}>
-                  {isUploading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <ImagePlus className="h-4 w-4 shrink-0" />}
-                  <span>{isUploading ? "Subiendo archivo..." : "Imagen (se comprime a 1 MB) · PDF máx. 2 MB"}</span>
-                  <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileSelect} disabled={isUploading} />
-                </label>
+              </label>
+
+              {isInvoiced && (
+                <div className="space-y-3 pt-1">
+                  {/* Nº Factura */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invoiceNumber">Nº Factura <span className="text-destructive">*</span></Label>
+                    <Input id="invoiceNumber" {...register("invoiceNumber")} placeholder="00001-00000001" />
+                    {errors.invoiceNumber && <p className="text-xs text-destructive">{errors.invoiceNumber.message}</p>}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invoiceDate">Fecha de facturaciÃ³n <span className="text-destructive">*</span></Label>
+                    <Input id="invoiceDate" type="date" {...register("invoiceDate")} />
+                    {errors.invoiceDate && <p className="text-xs text-destructive">{errors.invoiceDate.message}</p>}
+                  </div>
+
+                  {/* Foto / PDF de la factura */}
+                  <div className="space-y-1.5">
+                    <Label>Comprobante <span className="text-xs text-muted-foreground">(opcional — imagen o PDF)</span></Label>
+                    {hasFile ? (
+                      <div className="relative w-full overflow-hidden rounded-md border">
+                        {isImage ? (
+                          <img src={documentPreview} alt="Factura" className="max-h-48 w-full object-contain bg-muted" />
+                        ) : (
+                          <div className="flex items-center gap-3 px-4 py-3 bg-muted/50">
+                            <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                            {documentKey ? (
+                              <a href={fileUrl(documentKey)} target="_blank" rel="noopener noreferrer"
+                                className="text-sm text-primary hover:underline truncate">{documentName}</a>
+                            ) : (
+                              <span className="text-sm text-muted-foreground truncate">{documentName}</span>
+                            )}
+                          </div>
+                        )}
+                        <button type="button" onClick={clearDocument}
+                          className="absolute right-2 top-2 rounded-full bg-background/90 p-1 hover:bg-background shadow-sm">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition-colors ${isUploading ? "pointer-events-none opacity-60" : ""}`}>
+                        {isUploading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <ImagePlus className="h-4 w-4 shrink-0" />}
+                        <span>{isUploading ? "Subiendo archivo..." : "Imagen (se comprime a 1 MB) · PDF máx. 2 MB"}</span>
+                        <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileSelect} disabled={isUploading} />
+                      </label>
+                    )}
+                    {documentError && <p className="text-xs text-destructive">{documentError}</p>}
+                  </div>
+                </div>
               )}
-              {documentError && <p className="text-xs text-destructive">{documentError}</p>}
             </div>
 
           </div>
 
           <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background shrink-0">
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting || isUploading}>
+            <Button type="submit" disabled={isSubmitting || isUploading || items.length === 0}>
               {isSubmitting ? "Guardando..." : "Guardar Venta"}
             </Button>
           </div>

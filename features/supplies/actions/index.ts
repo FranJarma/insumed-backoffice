@@ -41,7 +41,9 @@ export async function createSupply(input: unknown) {
       name: parsed.data.name,
       description: parsed.data.description || null,
       unitPrice: parsed.data.unitPrice,
-      unitMeasure: parsed.data.unitMeasure,
+      priceWithVat: parsed.data.priceWithVat || null,
+      category: parsed.data.category || null,
+      lotNumber: parsed.data.lotNumber || null,
       expiryDate: parsed.data.expiryDate || null,
     });
   }
@@ -68,7 +70,9 @@ export async function updateSupply(id: string, input: unknown) {
         name: parsed.data.name,
         description: parsed.data.description || null,
         unitPrice: parsed.data.unitPrice,
-        unitMeasure: parsed.data.unitMeasure,
+        priceWithVat: parsed.data.priceWithVat || null,
+        category: parsed.data.category || null,
+        lotNumber: parsed.data.lotNumber || null,
         expiryDate: parsed.data.expiryDate || null,
       })
       .where(eq(supplies.id, id));

@@ -1,6 +1,6 @@
 import { format, endOfMonth, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
-import { and, desc, eq, gte, lte, ne, sum } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, ne, sum } from "drizzle-orm";
 import { mockGetDashboardData } from "@/db/mock-store";
 import { getDb } from "@/db";
 import { clients, purchases, sales } from "@/db/schema";
@@ -34,13 +34,13 @@ async function getDashboardData(monthStart: string, monthEnd: string) {
   const [pendingResult] = await db
     .select({ total: sum(sales.amount) })
     .from(sales)
-    .where(eq(sales.status, "PENDING"));
+    .where(inArray(sales.status, ["PENDING_INVOICE", "PENDING", "INVOICED"]));
 
   const topClients = await db
     .select({ name: clients.name, total: sum(sales.amount) })
     .from(sales)
     .innerJoin(clients, eq(sales.clientId, clients.id))
-    .where(eq(sales.status, "PENDING"))
+    .where(inArray(sales.status, ["PENDING_INVOICE", "PENDING", "INVOICED"]))
     .groupBy(clients.name)
     .orderBy(desc(sum(sales.amount)))
     .limit(5);
