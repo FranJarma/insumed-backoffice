@@ -6,8 +6,20 @@ import { requireEnv } from "@/lib/env";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Página de login: pública
-  if (pathname === "/login") return NextResponse.next();
+  // Página de login: redirigir al dashboard si ya tiene sesión activa
+  if (pathname === "/login") {
+    const token = request.cookies.get("session")?.value;
+    if (token) {
+      try {
+        const secret = new TextEncoder().encode(requireEnv("SESSION_SECRET", { minLength: 32 }));
+        await jwtVerify(token, secret);
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      } catch {
+        // Token inválido, dejar pasar al login
+      }
+    }
+    return NextResponse.next();
+  }
 
   const token = request.cookies.get("session")?.value;
 
