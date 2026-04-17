@@ -39,3 +39,7 @@ export function buildRandomR2Key(opts: {
 export function isValidR2Key(key: string) {
   return R2_KEY_PATTERN.test(key);
 }
+
+export function isValidR2KeyForDirectory(key: string, directory: UploadDirectory) {
+  return isValidR2Key(key) && key.startsWith(`${directory}/`);
+}

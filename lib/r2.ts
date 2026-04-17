@@ -1,4 +1,4 @@
-import { S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { requireEnv } from "@/lib/env";
 
 if (
@@ -23,3 +23,7 @@ export const r2 = new S3Client({
 });
 
 export const R2_BUCKET = requireEnv("R2_BUCKET_NAME", { allowInMock: true });
+
+export async function deleteR2Object(key: string) {
+  await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+}

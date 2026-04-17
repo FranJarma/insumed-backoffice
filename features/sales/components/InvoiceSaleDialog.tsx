@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { markSaleAsInvoiced } from "../actions";
-import { fileUrl, uploadFile, validateFile } from "@/lib/upload";
+import { deleteUploadedFile, fileUrl, uploadFile, validateFile } from "@/lib/upload";
 
 const invoiceSaleSchema = z.object({
   invoiceNumber: z.string().min(1, "El número de factura es requerido"),
@@ -92,7 +92,10 @@ export function InvoiceSaleDialog({
     }
   };
 
-  const clearFile = () => {
+  const clearFile = (shouldDelete = true) => {
+    if (shouldDelete && documentKey) {
+      void deleteUploadedFile(documentKey).catch(() => undefined);
+    }
     if (documentPreview) URL.revokeObjectURL(documentPreview);
     setDocumentKey(undefined);
     setDocumentPreview(undefined);
@@ -117,7 +120,7 @@ export function InvoiceSaleDialog({
       documentUrl: data.documentUrl,
     });
     if ("success" in result) {
-      clearFile();
+      clearFile(false);
       reset({ invoiceDate: new Date().toISOString().split("T")[0] });
       onSuccess();
     }
@@ -191,7 +194,7 @@ export function InvoiceSaleDialog({
               <div className="relative rounded-md border bg-muted/30 p-2">
                 <button
                   type="button"
-                  onClick={clearFile}
+                  onClick={() => clearFile()}
                   className="absolute right-1 top-1 rounded-full bg-background p-0.5 shadow transition-colors hover:bg-destructive hover:text-white"
                 >
                   <X className="h-3.5 w-3.5" />

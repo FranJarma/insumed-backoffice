@@ -19,7 +19,7 @@ import { createPurchase } from "../actions";
 import { createPurchaseSchema, PAYMENT_METHODS, type CreatePurchaseInput } from "../types";
 import type { MockProvider } from "@/db/mock-store";
 import { ProviderAutocomplete } from "./ProviderAutocomplete";
-import { fileUrl, uploadFile, validateFile } from "@/lib/upload";
+import { deleteUploadedFile, fileUrl, uploadFile, validateFile } from "@/lib/upload";
 
 interface CreatePurchaseDialogProps {
   providers: MockProvider[];
@@ -86,7 +86,10 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
     }
   };
 
-  const clearRemito = () => {
+  const clearRemito = (shouldDelete = true) => {
+    if (shouldDelete && remitoKey) {
+      void deleteUploadedFile(remitoKey).catch(() => undefined);
+    }
     if (remitoPreview) URL.revokeObjectURL(remitoPreview);
     setRemitoKey(undefined);
     setRemitoPreview(undefined);
@@ -100,7 +103,7 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
     if ("success" in result) {
       setOpen(false);
       reset(defaultValues);
-      clearRemito();
+      clearRemito(false);
       router.refresh();
     }
   };
@@ -208,7 +211,7 @@ export function CreatePurchaseDialog({ providers, category = "PROVEEDOR" }: Crea
                 )}
                 <button
                   type="button"
-                  onClick={clearRemito}
+                  onClick={() => clearRemito()}
                   className="absolute right-1 top-1 rounded-full bg-background/80 p-1 hover:bg-background"
                 >
                   <X className="h-4 w-4" />

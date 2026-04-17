@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { createCheck } from "../actions";
 import { createCheckSchema, type CreateCheckInput } from "../types";
 import type { MockBank } from "@/db/mock-store";
-import { uploadFile, validateFile, fileUrl } from "@/lib/upload";
+import { deleteUploadedFile, fileUrl, uploadFile, validateFile } from "@/lib/upload";
 import { EntityAutocomplete } from "./EntityAutocomplete";
 
 type EntityOption = { id: string; name: string };
@@ -79,7 +79,10 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
     }
   };
 
-  const clearPhoto = () => {
+  const clearPhoto = (shouldDelete = true) => {
+    if (shouldDelete && photoKey) {
+      void deleteUploadedFile(photoKey).catch(() => undefined);
+    }
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoKey(undefined);
     setPhotoPreview(undefined);
@@ -93,7 +96,7 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
     if ("success" in result) {
       setOpen(false);
       reset({ issueDate: today, dueDate: today, kind: "COMUN" });
-      clearPhoto();
+      clearPhoto(false);
       router.refresh();
     }
   };
@@ -236,7 +239,7 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
                       )}
                     </div>
                   )}
-                  <button type="button" onClick={clearPhoto}
+                  <button type="button" onClick={() => clearPhoto()}
                     className="absolute right-1 top-1 rounded-full bg-background/80 p-1 hover:bg-background">
                     <X className="h-4 w-4" />
                   </button>

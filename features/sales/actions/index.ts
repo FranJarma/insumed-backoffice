@@ -3,23 +3,29 @@
 import { revalidatePath } from "next/cache";
 import { desc, eq, isNull } from "drizzle-orm";
 import {
-  mockGetSalesWithClients,
-  mockCreateSale,
-  mockMarkSaleAsPaid,
-  mockMarkSaleAsInvoiced,
   mockCancelSale,
-  mockUpdateSale,
+  mockCreateSale,
+  mockGetSalesWithClients,
+  mockMarkSaleAsInvoiced,
+  mockMarkSaleAsPaid,
   mockSoftDeleteSale,
+  mockUpdateSale,
 } from "@/db/mock-store";
 import { getDb } from "@/db";
-import { sales, clients, saleItems } from "@/db/schema";
+import { clients, saleItems, sales } from "@/db/schema";
 import { authorizeAction, requirePermission } from "@/lib/auth";
-import { createSaleSchema, cancelSaleSchema, type SaleItemInput } from "../types";
+import { deleteR2Object } from "@/lib/r2";
+import {
+  cancelSaleSchema,
+  createSaleSchema,
+  markSaleAsInvoicedSchema,
+  type SaleItemInput,
+} from "../types";
 
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
-const CANCELLABLE_SALE_STATUSES = ["INVOICED", "PAID", "PENDING"] as const;
+const CANCELLABLE_SALE_STATUSES = ["INVOICED", "PAID"] as const;
 const CANCEL_ONLY_INVOICED_ERROR = "Solo se pueden anular facturas de ventas facturadas.";
-const REQUIRED_SALE_ITEMS_ERROR = "Agregá al menos un insumo para continuar.";
+const REQUIRED_SALE_ITEMS_ERROR = "Agrega al menos un insumo para continuar.";
 
 function hasRequiredSaleItems(items: SaleItemInput[]) {
   return items.length > 0;
@@ -35,13 +41,33 @@ function resolveInvoiceDate(params: {
   saleDate: string;
   existingInvoiceDate?: string | null;
 }) {
-  if (!params.isInvoiced) return null;
+  if (!params.isInvoiced) {
+    return null;
+  }
+
   return params.invoiceDate || params.existingInvoiceDate || params.saleDate;
+}
+
+async function getExistingSale(id: string) {
+  const [sale] = await getDb()
+    .select({
+      status: sales.status,
+      invoiceDate: sales.invoiceDate,
+      documentUrl: sales.documentUrl,
+      creditNoteUrl: sales.creditNoteUrl,
+    })
+    .from(sales)
+    .where(eq(sales.id, id))
+    .limit(1);
+
+  return sale ?? null;
 }
 
 export async function getSalesWithClients() {
   await requirePermission("sales:read");
-  if (USE_MOCK) return mockGetSalesWithClients();
+  if (USE_MOCK) {
+    return mockGetSalesWithClients();
+  }
 
   return getDb()
     .select({
@@ -76,25 +102,34 @@ export async function createSale(input: unknown, items: SaleItemInput[] = []) {
   if (!hasRequiredSaleItems(items)) {
     return { error: { items: [REQUIRED_SALE_ITEMS_ERROR] } };
   }
+
   const auth = await authorizeAction("sales:create");
-  if ("error" in auth) return auth;
+  if ("error" in auth) {
+    return auth;
+  }
 
   const { isInvoiced, documentUrl, oc, patient, invoiceNumber, invoiceDate, ...rest } = parsed.data;
   const status = isInvoiced ? "INVOICED" : "PENDING_INVOICE";
 
   if (USE_MOCK) {
-    mockCreateSale({ ...rest, invoiceNumber: invoiceNumber || undefined, invoiceDate, oc, patient, documentUrl, isInvoiced }, items);
+    mockCreateSale(
+      { ...rest, invoiceNumber: invoiceNumber || undefined, invoiceDate, oc, patient, documentUrl, isInvoiced },
+      items
+    );
   } else {
     const db = getDb();
-    const [newSale] = await db.insert(sales).values({
-      ...rest,
-      invoiceNumber: invoiceNumber || null,
-      invoiceDate: isInvoiced ? (invoiceDate || rest.date) : null,
-      oc: oc || null,
-      patient: patient || null,
-      documentUrl: documentUrl || null,
-      status,
-    }).returning({ id: sales.id });
+    const [newSale] = await db
+      .insert(sales)
+      .values({
+        ...rest,
+        invoiceNumber: invoiceNumber || null,
+        invoiceDate: isInvoiced ? invoiceDate || rest.date : null,
+        oc: oc || null,
+        patient: patient || null,
+        documentUrl: documentUrl || null,
+        status,
+      })
+      .returning({ id: sales.id });
 
     if (items.length > 0) {
       await db.insert(saleItems).values(
@@ -125,42 +160,53 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
   if (!hasRequiredSaleItems(items)) {
     return { error: { items: [REQUIRED_SALE_ITEMS_ERROR] } };
   }
+
   const auth = await authorizeAction("sales:update");
-  if ("error" in auth) return auth;
+  if ("error" in auth) {
+    return auth;
+  }
 
   const { isInvoiced, documentUrl, oc, patient, invoiceNumber, invoiceDate, ...rest } = parsed.data;
 
   if (USE_MOCK) {
-    mockUpdateSale(id, { ...rest, invoiceNumber: invoiceNumber || undefined, invoiceDate, oc, patient, documentUrl, isInvoiced }, items);
+    mockUpdateSale(
+      id,
+      { ...rest, invoiceNumber: invoiceNumber || undefined, invoiceDate, oc, patient, documentUrl, isInvoiced },
+      items
+    );
   } else {
     const db = getDb();
+    const existingSale = await getExistingSale(id);
+    if (!existingSale) {
+      return { error: { _form: ["Venta no encontrada"] } };
+    }
 
-    // Only update status if not already in a terminal state
-    const [existing] = await db
-      .select({ status: sales.status, invoiceDate: sales.invoiceDate })
-      .from(sales)
-      .where(eq(sales.id, id));
-    let newStatus = existing?.status;
+    let newStatus = existingSale.status;
     if (newStatus === "PENDING_INVOICE" || newStatus === "INVOICED" || newStatus === "PENDING") {
       newStatus = isInvoiced ? "INVOICED" : "PENDING_INVOICE";
     }
 
-    await db.update(sales).set({
-      ...rest,
-      invoiceNumber: invoiceNumber || null,
-      invoiceDate: resolveInvoiceDate({
-        isInvoiced,
-        invoiceDate,
-        saleDate: rest.date,
-        existingInvoiceDate: existing?.invoiceDate,
-      }),
-      oc: oc || null,
-      patient: patient || null,
-      documentUrl: documentUrl || null,
-      status: newStatus,
-    }).where(eq(sales.id, id));
+    const nextDocumentUrl =
+      documentUrl === undefined ? existingSale.documentUrl : documentUrl || null;
 
-    // Replace items
+    await db
+      .update(sales)
+      .set({
+        ...rest,
+        invoiceNumber: invoiceNumber || null,
+        invoiceDate: resolveInvoiceDate({
+          isInvoiced,
+          invoiceDate,
+          saleDate: rest.date,
+          existingInvoiceDate: existingSale.invoiceDate,
+        }),
+        oc: oc || null,
+        patient: patient || null,
+        documentUrl: nextDocumentUrl,
+        status: newStatus,
+      })
+      .where(eq(sales.id, id));
+
     await db.delete(saleItems).where(eq(saleItems.saleId, id));
     if (items.length > 0) {
       await db.insert(saleItems).values(
@@ -176,6 +222,16 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
         }))
       );
     }
+
+    if (
+      existingSale.documentUrl &&
+      nextDocumentUrl &&
+      existingSale.documentUrl !== nextDocumentUrl
+    ) {
+      await deleteR2Object(existingSale.documentUrl).catch((error) => {
+        console.error("[sales.updateSale.deleteOldDocument]", error);
+      });
+    }
   }
 
   revalidatePath("/sales");
@@ -185,7 +241,9 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
 
 export async function deleteSale(id: string) {
   const auth = await authorizeAction("sales:delete");
-  if ("error" in auth) return auth;
+  if ("error" in auth) {
+    return auth;
+  }
 
   if (USE_MOCK) {
     mockSoftDeleteSale(id);
@@ -200,7 +258,9 @@ export async function deleteSale(id: string) {
 
 export async function markSaleAsPaid(id: string) {
   const auth = await authorizeAction("sales:update");
-  if ("error" in auth) return auth;
+  if ("error" in auth) {
+    return auth;
+  }
 
   if (USE_MOCK) {
     mockMarkSaleAsPaid(id);
@@ -213,19 +273,47 @@ export async function markSaleAsPaid(id: string) {
   return { success: true };
 }
 
-export async function markSaleAsInvoiced(id: string, data: { invoiceNumber: string; invoiceDate: string; documentUrl?: string }) {
+export async function markSaleAsInvoiced(id: string, input: unknown) {
+  const parsed = markSaleAsInvoicedSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
   const auth = await authorizeAction("sales:update");
-  if ("error" in auth) return auth;
+  if ("error" in auth) {
+    return auth;
+  }
 
   if (USE_MOCK) {
-    mockMarkSaleAsInvoiced(id, data);
+    mockMarkSaleAsInvoiced(id, parsed.data);
   } else {
-    await getDb().update(sales).set({
-      status: "INVOICED",
-      invoiceNumber: data.invoiceNumber,
-      invoiceDate: data.invoiceDate,
-      documentUrl: data.documentUrl || null,
-    }).where(eq(sales.id, id));
+    const existingSale = await getExistingSale(id);
+    if (!existingSale) {
+      return { error: { _form: ["Venta no encontrada"] } };
+    }
+
+    const nextDocumentUrl =
+      parsed.data.documentUrl === undefined ? existingSale.documentUrl : parsed.data.documentUrl || null;
+
+    await getDb()
+      .update(sales)
+      .set({
+        status: "INVOICED",
+        invoiceNumber: parsed.data.invoiceNumber,
+        invoiceDate: parsed.data.invoiceDate,
+        documentUrl: nextDocumentUrl,
+      })
+      .where(eq(sales.id, id));
+
+    if (
+      existingSale.documentUrl &&
+      nextDocumentUrl &&
+      existingSale.documentUrl !== nextDocumentUrl
+    ) {
+      await deleteR2Object(existingSale.documentUrl).catch((error) => {
+        console.error("[sales.markSaleAsInvoiced.deleteOldDocument]", error);
+      });
+    }
   }
 
   revalidatePath("/sales");
@@ -238,29 +326,47 @@ export async function cancelSale(id: string, input: unknown) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
+
   const auth = await authorizeAction("sales:update");
-  if ("error" in auth) return auth;
+  if ("error" in auth) {
+    return auth;
+  }
 
   if (USE_MOCK) {
     const sale = mockGetSalesWithClients().find((item) => item.id === id);
     if (!canCancelSale(sale?.status)) {
       return { error: { _form: [CANCEL_ONLY_INVOICED_ERROR] } };
     }
+
     mockCancelSale(id, parsed.data);
   } else {
-    const [existingSale] = await getDb().select({ status: sales.status }).from(sales).where(eq(sales.id, id));
-    if (!canCancelSale(existingSale?.status)) {
+    const existingSale = await getExistingSale(id);
+    if (!existingSale) {
+      return { error: { _form: ["Venta no encontrada"] } };
+    }
+    if (!canCancelSale(existingSale.status)) {
       return { error: { _form: [CANCEL_ONLY_INVOICED_ERROR] } };
     }
+
     await getDb()
       .update(sales)
       .set({
         status: "CANCELLED",
         creditNoteNumber: parsed.data.creditNoteNumber,
         cancellationDate: parsed.data.cancellationDate,
-        creditNoteUrl: parsed.data.creditNoteUrl,
+        creditNoteUrl: parsed.data.creditNoteUrl || null,
       })
       .where(eq(sales.id, id));
+
+    if (
+      existingSale.creditNoteUrl &&
+      parsed.data.creditNoteUrl &&
+      existingSale.creditNoteUrl !== parsed.data.creditNoteUrl
+    ) {
+      await deleteR2Object(existingSale.creditNoteUrl).catch((error) => {
+        console.error("[sales.cancelSale.deleteOldCreditNote]", error);
+      });
+    }
   }
 
   revalidatePath("/sales");

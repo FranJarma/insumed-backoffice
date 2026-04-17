@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cancelSale } from "../actions";
 import { cancelSaleSchema, type CancelSaleInput } from "../types";
-import { fileUrl, uploadFile, validateFile } from "@/lib/upload";
+import { deleteUploadedFile, fileUrl, uploadFile, validateFile } from "@/lib/upload";
 
 interface CancelSaleDialogProps {
   saleId: string | null;
@@ -87,7 +87,10 @@ export function CancelSaleDialog({
     }
   };
 
-  const clearFile = () => {
+  const clearFile = (shouldDelete = true) => {
+    if (shouldDelete && creditNoteKey) {
+      void deleteUploadedFile(creditNoteKey).catch(() => undefined);
+    }
     if (creditNotePreview) URL.revokeObjectURL(creditNotePreview);
     setCreditNoteKey(undefined);
     setCreditNotePreview(undefined);
@@ -109,7 +112,7 @@ export function CancelSaleDialog({
     setSubmitError(null);
     const result = await cancelSale(saleId, data);
     if ("success" in result) {
-      clearFile();
+      clearFile(false);
       reset({ cancellationDate: new Date().toISOString().split("T")[0] });
       onSuccess();
       return;
@@ -184,7 +187,7 @@ export function CancelSaleDialog({
               <div className="relative rounded-md border bg-muted/30 p-2">
                 <button
                   type="button"
-                  onClick={clearFile}
+                  onClick={() => clearFile()}
                   className="absolute right-1 top-1 rounded-full bg-background p-0.5 shadow transition-colors hover:bg-destructive hover:text-white"
                 >
                   <X className="h-3.5 w-3.5" />

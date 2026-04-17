@@ -16,7 +16,7 @@ import { createSaleSchema, type CreateSaleInput, type SaleItemInput } from "../t
 import type { MockSupply } from "@/db/mock-store";
 import { ClientAutocomplete } from "./ClientAutocomplete";
 import { formatCurrency } from "@/lib/utils";
-import { uploadFile, validateFile, fileUrl } from "@/lib/upload";
+import { deleteUploadedFile, fileUrl, uploadFile, validateFile } from "@/lib/upload";
 
 type ClientOption = { id: string; name: string; cuit: string };
 type PatientOption = { id: string; name: string; clientId: string };
@@ -147,7 +147,10 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
     }
   };
 
-  const clearDocument = () => {
+  const clearDocument = (shouldDelete = true) => {
+    if (shouldDelete && documentKey) {
+      void deleteUploadedFile(documentKey).catch(() => undefined);
+    }
     if (documentPreview) URL.revokeObjectURL(documentPreview);
     setDocumentKey(undefined);
     setDocumentPreview(undefined);
@@ -171,7 +174,7 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
     if ("success" in result) {
       setOpen(false);
       reset(defaultValues);
-      clearDocument();
+      clearDocument(false);
       setItems([]);
       setSelectedSupplyId("");
       setItemQty("1");
@@ -401,7 +404,7 @@ export function CreateSaleDialog({ clients, patients, supplies }: CreateSaleDial
                             )}
                           </div>
                         )}
-                        <button type="button" onClick={clearDocument}
+                        <button type="button" onClick={() => clearDocument()}
                           className="absolute right-2 top-2 rounded-full bg-background/90 p-1 hover:bg-background shadow-sm">
                           <X className="h-4 w-4" />
                         </button>

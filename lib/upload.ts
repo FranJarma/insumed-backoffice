@@ -12,17 +12,23 @@ export interface UploadOptions {
   date: string;
 }
 
-/**
- * Returns a URL to view a file stored in R2 (via presigned GET, 1h expiry).
- * Use this as the href for any link or img tag pointing to an R2 file.
- */
 export function fileUrl(key: string): string {
   return `/api/file?key=${encodeURIComponent(key)}`;
 }
 
-/**
- * Compresses an image File using Canvas, targeting < IMAGE_MAX_MB.
- */
+export async function deleteUploadedFile(key: string) {
+  const response = await fetch("/api/upload", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key }),
+  });
+
+  if (!response.ok) {
+    const { error } = await response.json().catch(() => ({ error: "Error desconocido" }));
+    throw new Error(error ?? "No se pudo borrar el archivo");
+  }
+}
+
 export async function compressImage(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -42,18 +48,26 @@ export async function compressImage(file: File): Promise<File> {
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
-      if (!ctx) { reject(new Error("Canvas no disponible")); return; }
+      if (!ctx) {
+        reject(new Error("Canvas no disponible"));
+        return;
+      }
+
       ctx.drawImage(img, 0, 0, width, height);
 
       const outputType = file.type === "image/webp" ? "image/webp" : "image/jpeg";
       const targetBytes = IMAGE_MAX_MB * 1024 * 1024;
       const qualities = [0.85, 0.7, 0.55, 0.4];
 
-      const tryNext = (idx: number) => {
-        if (idx >= qualities.length) {
+      const tryNext = (index: number) => {
+        if (index >= qualities.length) {
           canvas.toBlob(
             (blob) => {
-              if (!blob) { reject(new Error("No se pudo comprimir la imagen")); return; }
+              if (!blob) {
+                reject(new Error("No se pudo comprimir la imagen"));
+                return;
+              }
+
               resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: outputType }));
             },
             outputType,
@@ -61,35 +75,41 @@ export async function compressImage(file: File): Promise<File> {
           );
           return;
         }
+
         canvas.toBlob(
           (blob) => {
-            if (!blob) { reject(new Error("No se pudo comprimir la imagen")); return; }
+            if (!blob) {
+              reject(new Error("No se pudo comprimir la imagen"));
+              return;
+            }
+
             if (blob.size <= targetBytes) {
               resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: outputType }));
-            } else {
-              tryNext(idx + 1);
+              return;
             }
+
+            tryNext(index + 1);
           },
           outputType,
-          qualities[idx]
+          qualities[index]
         );
       };
 
       tryNext(0);
     };
 
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("No se pudo cargar la imagen")); };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("No se pudo cargar la imagen"));
+    };
+
     img.src = objectUrl;
   });
 }
 
-/**
- * Validates a file before uploading.
- * Returns an error string or null if valid.
- */
 export function validateFile(file: File): string | null {
   if (![...IMAGE_TYPES, PDF_TYPE].includes(file.type)) {
-    return "Tipo no permitido. Solo se aceptan imágenes (JPG, PNG, WebP) o PDF.";
+    return "Tipo no permitido. Solo se aceptan imagenes (JPG, PNG, WebP) o PDF.";
   }
   if (file.type === PDF_TYPE && file.size > PDF_MAX_MB * 1024 * 1024) {
     return `El PDF no puede superar ${PDF_MAX_MB} MB.`;
@@ -97,38 +117,34 @@ export function validateFile(file: File): string | null {
   if (IMAGE_TYPES.includes(file.type) && file.size > 10 * 1024 * 1024) {
     return "La imagen no puede superar 10 MB.";
   }
+
   return null;
 }
 
-/**
- * Validates, compresses if image, uploads to R2.
- * Returns the R2 object key (e.g. "facturas/osde/2026/04/factura.jpg").
- * Store this key in the DB — never a URL.
- */
-export async function uploadFile(file: File, opts: UploadOptions): Promise<string> {
+export async function uploadFile(file: File, options: UploadOptions): Promise<string> {
   let fileToUpload = file;
 
   if (IMAGE_TYPES.includes(file.type)) {
     fileToUpload = await compressImage(file);
   }
 
-  const res = await fetch("/api/upload", {
+  const response = await fetch("/api/upload", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contentType: fileToUpload.type,
-      directory: opts.directory,
-      date: opts.date,
+      directory: options.directory,
+      date: options.date,
       size: fileToUpload.size,
     }),
   });
 
-  if (!res.ok) {
-    const { error } = await res.json().catch(() => ({ error: "Error desconocido" }));
+  if (!response.ok) {
+    const { error } = await response.json().catch(() => ({ error: "Error desconocido" }));
     throw new Error(error ?? "No se pudo obtener la URL de subida");
   }
 
-  const { uploadUrl, key } = await res.json() as { uploadUrl: string; key: string };
+  const { uploadUrl, key } = (await response.json()) as { uploadUrl: string; key: string };
 
   const upload = await fetch(uploadUrl, {
     method: "PUT",

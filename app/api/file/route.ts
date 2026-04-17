@@ -4,9 +4,11 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getSession } from "@/lib/auth";
 import { isValidR2Key } from "@/lib/file-security";
 import { hasPermission } from "@/lib/permissions";
+import { getClientIpFromHeaders } from "@/lib/request-security";
+import { hitRateLimit, toRateLimitResponse } from "@/lib/rate-limit";
 import { r2, R2_BUCKET } from "@/lib/r2";
 
-const EXPIRES_IN = 60 * 60;
+const EXPIRES_IN_SECONDS = 5 * 60;
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -22,12 +24,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "key es requerido" }, { status: 400 });
   }
   if (!isValidR2Key(key)) {
-    return NextResponse.json({ error: "key inválido" }, { status: 400 });
+    return NextResponse.json({ error: "key invalido" }, { status: 400 });
+  }
+
+  const clientIp = getClientIpFromHeaders(req.headers);
+  const rateLimit = hitRateLimit(`file:read:${session.id}:${clientIp}`, {
+    maxAttempts: 120,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    const retry = toRateLimitResponse(rateLimit.retryAfterMs);
+    return NextResponse.json(
+      { error: "Demasiadas solicitudes de lectura. Intenta mas tarde." },
+      { status: 429, headers: { "Retry-After": String(retry.retryAfterSeconds) } }
+    );
   }
 
   try {
     const command = new GetObjectCommand({ Bucket: R2_BUCKET, Key: key });
-    const url = await getSignedUrl(r2, command, { expiresIn: EXPIRES_IN });
+    const url = await getSignedUrl(r2, command, { expiresIn: EXPIRES_IN_SECONDS });
     return NextResponse.redirect(url);
   } catch (err) {
     console.error("[file]", err);
