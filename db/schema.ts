@@ -12,6 +12,7 @@ import {
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
 export const userRole = pgEnum("user_role", ["jefe", "operario", "admin"]);
+export const supplyStatus = pgEnum("supply_status", ["en_deposito", "en_entrega", "entregado"]);
 export const saleStatus = pgEnum("sale_status", ["PENDING_INVOICE", "PENDING", "INVOICED", "PAID", "CANCELLED"]);
 export const invoiceType = pgEnum("invoice_type", ["A", "B"]);
 export const purchaseStatus = pgEnum("purchase_status", ["PENDING", "PAID"]);
@@ -26,6 +27,13 @@ export const checkStatus = pgEnum("check_status", [
 ]);
 
 // ─── Tables ─────────────────────────────────────────────────────────────────
+
+export const supplyCategories = pgTable("supply_categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -90,6 +98,7 @@ export const sales = pgTable("sales", {
   creditNoteNumber: text("credit_note_number"),
   cancellationDate: date("cancellation_date"),
   creditNoteUrl: text("credit_note_url"),
+  deliveredAt: timestamp("delivered_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -119,6 +128,7 @@ export const supplies = pgTable("supplies", {
   category: text("category"),
   lotNumber: text("lot_number"),
   expiryDate: date("expiry_date"),
+  status: supplyStatus("status").default("en_deposito").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -205,3 +215,5 @@ export type Supply = typeof supplies.$inferSelect;
 export type NewSupply = typeof supplies.$inferInsert;
 export type SaleItem = typeof saleItems.$inferSelect;
 export type NewSaleItem = typeof saleItems.$inferInsert;
+export type SupplyCategory = typeof supplyCategories.$inferSelect;
+export type NewSupplyCategory = typeof supplyCategories.$inferInsert;

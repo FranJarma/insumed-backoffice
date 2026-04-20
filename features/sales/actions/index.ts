@@ -1,18 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { desc, eq, isNull } from "drizzle-orm";
+import { desc, eq, inArray, isNull } from "drizzle-orm";
 import {
   mockCancelSale,
   mockCreateSale,
   mockGetSalesWithClients,
+  mockMarkSaleAsDelivered,
   mockMarkSaleAsInvoiced,
   mockMarkSaleAsPaid,
+  mockRevertSaleDelivery,
   mockSoftDeleteSale,
   mockUpdateSale,
 } from "@/db/mock-store";
 import { getDb } from "@/db";
-import { clients, saleItems, sales } from "@/db/schema";
+import { clients, saleItems, sales, supplies } from "@/db/schema";
 import { authorizeAction, requirePermission } from "@/lib/auth";
 import { deleteR2Object } from "@/lib/r2";
 import {
@@ -86,6 +88,7 @@ export async function getSalesWithClients() {
       creditNoteNumber: sales.creditNoteNumber,
       cancellationDate: sales.cancellationDate,
       creditNoteUrl: sales.creditNoteUrl,
+      deliveredAt: sales.deliveredAt,
       createdAt: sales.createdAt,
     })
     .from(sales)
@@ -144,10 +147,16 @@ export async function createSale(input: unknown, items: SaleItemInput[] = []) {
           subtotal: item.subtotal,
         }))
       );
+
+      const supplyIds = items.map((i) => i.supplyId).filter(Boolean) as string[];
+      if (supplyIds.length > 0) {
+        await db.update(supplies).set({ status: "en_entrega" }).where(inArray(supplies.id, supplyIds));
+      }
     }
   }
 
   revalidatePath("/sales");
+  revalidatePath("/supplies");
   revalidatePath("/dashboard");
   return { success: true };
 }
@@ -207,7 +216,18 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
       })
       .where(eq(sales.id, id));
 
+    const oldItems = await db
+      .select({ supplyId: saleItems.supplyId })
+      .from(saleItems)
+      .where(eq(saleItems.saleId, id));
+
     await db.delete(saleItems).where(eq(saleItems.saleId, id));
+
+    const oldSupplyIds = oldItems.map((i) => i.supplyId).filter(Boolean) as string[];
+    if (oldSupplyIds.length > 0) {
+      await db.update(supplies).set({ status: "en_deposito" }).where(inArray(supplies.id, oldSupplyIds));
+    }
+
     if (items.length > 0) {
       await db.insert(saleItems).values(
         items.map((item) => ({
@@ -221,6 +241,11 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
           subtotal: item.subtotal,
         }))
       );
+
+      const newSupplyIds = items.map((i) => i.supplyId).filter(Boolean) as string[];
+      if (newSupplyIds.length > 0) {
+        await db.update(supplies).set({ status: "en_entrega" }).where(inArray(supplies.id, newSupplyIds));
+      }
     }
 
     if (
@@ -235,6 +260,7 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
   }
 
   revalidatePath("/sales");
+  revalidatePath("/supplies");
   revalidatePath("/dashboard");
   return { success: true };
 }
@@ -248,10 +274,17 @@ export async function deleteSale(id: string) {
   if (USE_MOCK) {
     mockSoftDeleteSale(id);
   } else {
-    await getDb().update(sales).set({ deletedAt: new Date() }).where(eq(sales.id, id));
+    const db = getDb();
+    const saleItemsList = await db.select({ supplyId: saleItems.supplyId }).from(saleItems).where(eq(saleItems.saleId, id));
+    const supplyIds = saleItemsList.map((i) => i.supplyId).filter(Boolean) as string[];
+    if (supplyIds.length > 0) {
+      await db.update(supplies).set({ status: "en_deposito" }).where(inArray(supplies.id, supplyIds));
+    }
+    await db.update(sales).set({ deletedAt: new Date() }).where(eq(sales.id, id));
   }
 
   revalidatePath("/sales");
+  revalidatePath("/supplies");
   revalidatePath("/dashboard");
   return { success: true };
 }
@@ -321,6 +354,56 @@ export async function markSaleAsInvoiced(id: string, input: unknown) {
   return { success: true };
 }
 
+export async function markSaleAsDelivered(id: string) {
+  const auth = await authorizeAction("sales:update");
+  if ("error" in auth) return auth;
+
+  if (USE_MOCK) {
+    mockMarkSaleAsDelivered(id);
+  } else {
+    const db = getDb();
+    const saleItemsList = await db
+      .select({ supplyId: saleItems.supplyId })
+      .from(saleItems)
+      .where(eq(saleItems.saleId, id));
+
+    const supplyIds = saleItemsList.map((i) => i.supplyId).filter(Boolean) as string[];
+    if (supplyIds.length > 0) {
+      await db.update(supplies).set({ status: "entregado" }).where(inArray(supplies.id, supplyIds));
+    }
+    await db.update(sales).set({ deliveredAt: new Date() }).where(eq(sales.id, id));
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/supplies");
+  return { success: true };
+}
+
+export async function revertSaleDelivery(id: string) {
+  const auth = await authorizeAction("sales:update");
+  if ("error" in auth) return auth;
+
+  if (USE_MOCK) {
+    mockRevertSaleDelivery(id);
+  } else {
+    const db = getDb();
+    const saleItemsList = await db
+      .select({ supplyId: saleItems.supplyId })
+      .from(saleItems)
+      .where(eq(saleItems.saleId, id));
+
+    const supplyIds = saleItemsList.map((i) => i.supplyId).filter(Boolean) as string[];
+    if (supplyIds.length > 0) {
+      await db.update(supplies).set({ status: "en_deposito" }).where(inArray(supplies.id, supplyIds));
+    }
+    await db.update(sales).set({ deliveredAt: null }).where(eq(sales.id, id));
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/supplies");
+  return { success: true };
+}
+
 export async function cancelSale(id: string, input: unknown) {
   const parsed = cancelSaleSchema.safeParse(input);
   if (!parsed.success) {
@@ -348,7 +431,14 @@ export async function cancelSale(id: string, input: unknown) {
       return { error: { _form: [CANCEL_ONLY_INVOICED_ERROR] } };
     }
 
-    await getDb()
+    const db = getDb();
+    const saleItemsList = await db.select({ supplyId: saleItems.supplyId }).from(saleItems).where(eq(saleItems.saleId, id));
+    const supplyIds = saleItemsList.map((i) => i.supplyId).filter(Boolean) as string[];
+    if (supplyIds.length > 0) {
+      await db.update(supplies).set({ status: "en_deposito" }).where(inArray(supplies.id, supplyIds));
+    }
+
+    await db
       .update(sales)
       .set({
         status: "CANCELLED",
@@ -370,6 +460,7 @@ export async function cancelSale(id: string, input: unknown) {
   }
 
   revalidatePath("/sales");
+  revalidatePath("/supplies");
   revalidatePath("/dashboard");
   return { success: true };
 }

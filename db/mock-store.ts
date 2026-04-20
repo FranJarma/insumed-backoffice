@@ -53,6 +53,7 @@ export type MockSale = {
   creditNoteNumber: string | null;
   cancellationDate: string | null;
   creditNoteUrl: string | null;
+  deliveredAt: Date | null;
   createdAt: Date;
   deletedAt: Date | null;
 };
@@ -115,6 +116,7 @@ export type MockSupply = {
   category: string | null;
   lotNumber: string | null;
   expiryDate: string | null;
+  status: "en_deposito" | "en_entrega" | "entregado";
   createdAt: Date;
   deletedAt: Date | null;
 };
@@ -203,23 +205,23 @@ function initStore(): Store {
 
   const sales = ([
     // Mes anterior (marzo)
-    { id: "s1", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00001", date: lastMonth(5), oc: "OC-2025-001", patient: "García, Juan Carlos", amount: "185000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s2", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00002", date: lastMonth(8), oc: "OC-2025-002", patient: "López, María Elena", amount: "97500.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s3", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00001", date: lastMonth(12), oc: "OC-2025-003", patient: "Rodríguez, Carlos", amount: "230000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s4", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00004", date: lastMonth(15), oc: "OC-2025-004", patient: "Fernández, Ana", amount: "75000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s5", clientId: "c1", invoiceType: "B", invoiceNumber: "FC-B-00002", date: lastMonth(20), oc: "OC-2025-005", patient: "Martínez, Pedro", amount: "312000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s6", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00006", date: lastMonth(22), oc: "OC-2025-006", patient: "González, Laura", amount: "145000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s7", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00007", date: lastMonth(28), oc: "OC-2025-007", patient: "Díaz, Roberto", amount: "88000.00", status: "CANCELLED", documentUrl: null, creditNoteNumber: "NC-A-00001", creditNoteUrl: "https://example.com/nc-00001.pdf", createdAt: new Date(), deletedAt: null },
+    { id: "s1", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00001", date: lastMonth(5), oc: "OC-2025-001", patient: "García, Juan Carlos", amount: "185000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s2", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00002", date: lastMonth(8), oc: "OC-2025-002", patient: "López, María Elena", amount: "97500.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s3", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00001", date: lastMonth(12), oc: "OC-2025-003", patient: "Rodríguez, Carlos", amount: "230000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s4", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00004", date: lastMonth(15), oc: "OC-2025-004", patient: "Fernández, Ana", amount: "75000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s5", clientId: "c1", invoiceType: "B", invoiceNumber: "FC-B-00002", date: lastMonth(20), oc: "OC-2025-005", patient: "Martínez, Pedro", amount: "312000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s6", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00006", date: lastMonth(22), oc: "OC-2025-006", patient: "González, Laura", amount: "145000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s7", clientId: "c2", invoiceType: "A", invoiceNumber: "FC-A-00007", date: lastMonth(28), oc: "OC-2025-007", patient: "Díaz, Roberto", amount: "88000.00", status: "CANCELLED", documentUrl: null, creditNoteNumber: "NC-A-00001", creditNoteUrl: "https://example.com/nc-00001.pdf", createdAt: new Date(), deletedAt: null, deliveredAt: null },
     // Mes actual (abril)
-    { id: "s8", clientId: "c3", invoiceType: "A", invoiceNumber: "FC-A-00008", date: thisMonth(1), oc: "OC-2025-008", patient: "Sánchez, Carlos", amount: "420000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s9", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00009", date: thisMonth(1), oc: "OC-2025-009", patient: "Torres, Marta", amount: "190000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s10", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00010", date: thisMonth(2), oc: "OC-2025-010", patient: "Ruiz, Sergio", amount: "98000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s11", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00011", date: thisMonth(2), oc: "OC-2025-011", patient: "Moreno, Patricia", amount: "321000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s12", clientId: "c2", invoiceType: "B", invoiceNumber: "FC-B-00003", date: thisMonth(3), oc: "OC-2025-012", patient: "Jiménez, Lucía", amount: "167000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s13", clientId: "c1", invoiceType: "B", invoiceNumber: "FC-B-00004", date: thisMonth(5), oc: "OC-2025-013", patient: "Herrera, Diego", amount: "89500.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s14", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00005", date: thisMonth(7), oc: "OC-2025-014", patient: "Álvarez, Claudia", amount: "455000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s15", clientId: "c4", invoiceType: "B", invoiceNumber: "FC-B-00006", date: thisMonth(8), oc: "OC-2025-015", patient: "Vargas, Eduardo", amount: "143000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
-    { id: "s16", clientId: "c5", invoiceType: "B", invoiceNumber: "FC-B-00007", date: thisMonth(10), oc: "OC-2025-016", patient: "Castro, Valeria", amount: "275000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null },
+    { id: "s8", clientId: "c3", invoiceType: "A", invoiceNumber: "FC-A-00008", date: thisMonth(1), oc: "OC-2025-008", patient: "Sánchez, Carlos", amount: "420000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s9", clientId: "c1", invoiceType: "A", invoiceNumber: "FC-A-00009", date: thisMonth(1), oc: "OC-2025-009", patient: "Torres, Marta", amount: "190000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s10", clientId: "c4", invoiceType: "A", invoiceNumber: "FC-A-00010", date: thisMonth(2), oc: "OC-2025-010", patient: "Ruiz, Sergio", amount: "98000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s11", clientId: "c5", invoiceType: "A", invoiceNumber: "FC-A-00011", date: thisMonth(2), oc: "OC-2025-011", patient: "Moreno, Patricia", amount: "321000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s12", clientId: "c2", invoiceType: "B", invoiceNumber: "FC-B-00003", date: thisMonth(3), oc: "OC-2025-012", patient: "Jiménez, Lucía", amount: "167000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s13", clientId: "c1", invoiceType: "B", invoiceNumber: "FC-B-00004", date: thisMonth(5), oc: "OC-2025-013", patient: "Herrera, Diego", amount: "89500.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s14", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00005", date: thisMonth(7), oc: "OC-2025-014", patient: "Álvarez, Claudia", amount: "455000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s15", clientId: "c4", invoiceType: "B", invoiceNumber: "FC-B-00006", date: thisMonth(8), oc: "OC-2025-015", patient: "Vargas, Eduardo", amount: "143000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
+    { id: "s16", clientId: "c5", invoiceType: "B", invoiceNumber: "FC-B-00007", date: thisMonth(10), oc: "OC-2025-016", patient: "Castro, Valeria", amount: "275000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
   ] satisfies Array<Omit<MockSale, "invoiceDate" | "cancellationDate">>).map((sale) => ({
     invoiceDate: sale.invoiceNumber ? sale.date : null,
     cancellationDate: sale.status === "CANCELLED" ? sale.date : null,
@@ -273,14 +275,14 @@ function initStore(): Store {
   ];
 
   const supplies: MockSupply[] = [
-    { id: "sp1", pm: "PM-0001", name: "Catéter Venoso Central", description: "Catéter de triple lumen 7Fr x 20cm", unitPrice: "12500.00", priceWithVat: "15125.00", category: "Descartables", lotNumber: "L2024-001", expiryDate: "2026-12-31", createdAt: new Date(), deletedAt: null },
-    { id: "sp2", pm: "PM-0002", name: "Guantes de Látex Estériles", description: "Talla M, caja x 100 pares", unitPrice: "4800.00", priceWithVat: "5808.00", category: "Descartables", lotNumber: "L2024-002", expiryDate: "2026-06-30", createdAt: new Date(), deletedAt: null },
-    { id: "sp3", pm: "PM-0003", name: "Jeringa 10ml", description: "Con aguja 21G, estéril", unitPrice: "350.00", priceWithVat: "423.50", category: "Descartables", lotNumber: "L2024-003", expiryDate: "2027-03-31", createdAt: new Date(), deletedAt: null },
-    { id: "sp4", pm: "PM-0004", name: "Apósito Transparente", description: "10x12cm, film de poliuretano", unitPrice: "2100.00", priceWithVat: "2541.00", category: "Curaciones", lotNumber: "L2024-004", expiryDate: "2027-01-31", createdAt: new Date(), deletedAt: null },
-    { id: "sp5", pm: "PM-0005", name: "Sonda Nasogástrica N°16", description: "PVC flexible, radio-opaca", unitPrice: "3800.00", priceWithVat: "4598.00", category: "Instrumental", lotNumber: "L2024-005", expiryDate: "2026-09-30", createdAt: new Date(), deletedAt: null },
-    { id: "sp6", pm: "PM-0006", name: "Suero Fisiológico 500ml", description: "ClNa 0.9% bolsa flexible", unitPrice: "1850.00", priceWithVat: "2238.50", category: "Farmacia", lotNumber: "L2024-006", expiryDate: "2026-08-31", createdAt: new Date(), deletedAt: null },
-    { id: "sp7", pm: "PM-0007", name: "Gasas Estériles 10x10", description: "Tejido no tejido, paquete x 10", unitPrice: "620.00", priceWithVat: "750.20", category: "Curaciones", lotNumber: "L2024-007", expiryDate: null, createdAt: new Date(), deletedAt: null },
-    { id: "sp8", pm: "PM-0008", name: "Equipo de Venoclisis", description: "Con filtro de 15 micras y cámara de goteo", unitPrice: "980.00", priceWithVat: "1185.80", category: "Descartables", lotNumber: "L2024-008", expiryDate: "2027-06-30", createdAt: new Date(), deletedAt: null },
+    { id: "sp1", pm: "PM-0001", name: "Catéter Venoso Central", description: "Catéter de triple lumen 7Fr x 20cm", unitPrice: "12500.00", priceWithVat: "15125.00", category: "Descartables", lotNumber: "L2024-001", expiryDate: "2026-12-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp2", pm: "PM-0002", name: "Guantes de Látex Estériles", description: "Talla M, caja x 100 pares", unitPrice: "4800.00", priceWithVat: "5808.00", category: "Descartables", lotNumber: "L2024-002", expiryDate: "2026-06-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp3", pm: "PM-0003", name: "Jeringa 10ml", description: "Con aguja 21G, estéril", unitPrice: "350.00", priceWithVat: "423.50", category: "Descartables", lotNumber: "L2024-003", expiryDate: "2027-03-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp4", pm: "PM-0004", name: "Apósito Transparente", description: "10x12cm, film de poliuretano", unitPrice: "2100.00", priceWithVat: "2541.00", category: "Curaciones", lotNumber: "L2024-004", expiryDate: "2027-01-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp5", pm: "PM-0005", name: "Sonda Nasogástrica N°16", description: "PVC flexible, radio-opaca", unitPrice: "3800.00", priceWithVat: "4598.00", category: "Instrumental", lotNumber: "L2024-005", expiryDate: "2026-09-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp6", pm: "PM-0006", name: "Suero Fisiológico 500ml", description: "ClNa 0.9% bolsa flexible", unitPrice: "1850.00", priceWithVat: "2238.50", category: "Farmacia", lotNumber: "L2024-006", expiryDate: "2026-08-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp7", pm: "PM-0007", name: "Gasas Estériles 10x10", description: "Tejido no tejido, paquete x 10", unitPrice: "620.00", priceWithVat: "750.20", category: "Curaciones", lotNumber: "L2024-007", expiryDate: null, status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp8", pm: "PM-0008", name: "Equipo de Venoclisis", description: "Con filtro de 15 micras y cámara de goteo", unitPrice: "980.00", priceWithVat: "1185.80", category: "Descartables", lotNumber: "L2024-008", expiryDate: "2027-06-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
   ];
 
   return { banks, clients, providers, patients, sales, purchases, checks, supplies, saleItems: [] };
@@ -302,12 +304,14 @@ if (!global.__mockStore_v4) {
     if (!("priceWithVat" in sup)) (sup as MockSupply).priceWithVat = null;
     if (!("category" in sup)) (sup as MockSupply).category = null;
     if (!("lotNumber" in sup)) (sup as MockSupply).lotNumber = null;
+    if (!("status" in sup)) (sup as MockSupply).status = "en_deposito";
   }
   // Migrate sales: update status PENDING → INVOICED for backward compat
   for (const sale of global.__mockStore_v4.sales) {
     if ((sale.status as string) === "PENDING") sale.status = "INVOICED";
     sale.invoiceDate ??= sale.invoiceNumber ? sale.date : null;
     sale.cancellationDate ??= sale.status === "CANCELLED" ? sale.date : null;
+    (sale as MockSale).deliveredAt ??= null;
   }
   // Add paymentMethod to any purchases that are missing it
   for (const p of global.__mockStore_v4.purchases) {
@@ -497,6 +501,7 @@ export function mockCreateSale(
     creditNoteNumber: null,
     cancellationDate: null,
     creditNoteUrl: null,
+    deliveredAt: null,
     createdAt: new Date(),
     deletedAt: null,
   });
@@ -513,6 +518,10 @@ export function mockCreateSale(
       subtotal: item.subtotal,
       createdAt: new Date(),
     });
+    if (item.supplyId) {
+      const sup = store.supplies.find((s) => s.id === item.supplyId);
+      if (sup) sup.status = "en_entrega";
+    }
   }
 }
 export function mockUpdateSale(
@@ -537,6 +546,14 @@ export function mockUpdateSale(
       s.status = data.isInvoiced ? "INVOICED" : "PENDING_INVOICE";
     }
   }
+  // Revert old supply statuses
+  const oldItems = store.saleItems.filter((i) => i.saleId === id);
+  for (const item of oldItems) {
+    if (item.supplyId) {
+      const sup = store.supplies.find((s) => s.id === item.supplyId);
+      if (sup) sup.status = "en_deposito";
+    }
+  }
   // Replace items
   store.saleItems = store.saleItems.filter((i) => i.saleId !== id);
   for (const item of items) {
@@ -552,6 +569,10 @@ export function mockUpdateSale(
       subtotal: item.subtotal,
       createdAt: new Date(),
     });
+    if (item.supplyId) {
+      const sup = store.supplies.find((s) => s.id === item.supplyId);
+      if (sup) sup.status = "en_entrega";
+    }
   }
 }
 export function mockMarkSaleAsInvoiced(id: string, data: { invoiceNumber: string; invoiceDate: string; documentUrl?: string }) {
@@ -564,6 +585,13 @@ export function mockMarkSaleAsInvoiced(id: string, data: { invoiceNumber: string
   }
 }
 export function mockSoftDeleteSale(id: string) {
+  const saleItems = store.saleItems.filter((i) => i.saleId === id);
+  for (const item of saleItems) {
+    if (item.supplyId) {
+      const sup = store.supplies.find((s) => s.id === item.supplyId);
+      if (sup) sup.status = "en_deposito";
+    }
+  }
   const s = store.sales.find((s) => s.id === id);
   if (s) s.deletedAt = new Date();
 }
@@ -573,6 +601,13 @@ export function mockMarkSaleAsPaid(id: string) {
 }
 
 export function mockCancelSale(id: string, data: { creditNoteNumber: string; cancellationDate: string; creditNoteUrl?: string }) {
+  const saleItems = store.saleItems.filter((i) => i.saleId === id);
+  for (const item of saleItems) {
+    if (item.supplyId) {
+      const sup = store.supplies.find((s) => s.id === item.supplyId);
+      if (sup) sup.status = "en_deposito";
+    }
+  }
   const s = store.sales.find((s) => s.id === id);
   if (s) {
     s.status = "CANCELLED";
@@ -580,6 +615,35 @@ export function mockCancelSale(id: string, data: { creditNoteNumber: string; can
     s.cancellationDate = data.cancellationDate;
     s.creditNoteUrl = data.creditNoteUrl ?? null;
   }
+}
+
+export function mockMarkSaleAsDelivered(id: string) {
+  const saleItems = store.saleItems.filter((i) => i.saleId === id);
+  for (const item of saleItems) {
+    if (item.supplyId) {
+      const sup = store.supplies.find((s) => s.id === item.supplyId);
+      if (sup) sup.status = "entregado";
+    }
+  }
+  const s = store.sales.find((s) => s.id === id);
+  if (s) s.deliveredAt = new Date();
+}
+
+export function mockRevertSaleDelivery(id: string) {
+  const saleItems = store.saleItems.filter((i) => i.saleId === id);
+  for (const item of saleItems) {
+    if (item.supplyId) {
+      const sup = store.supplies.find((s) => s.id === item.supplyId);
+      if (sup) sup.status = "en_deposito";
+    }
+  }
+  const s = store.sales.find((s) => s.id === id);
+  if (s) s.deliveredAt = null;
+}
+
+export function mockUpdateSupplyStatus(id: string, status: MockSupply["status"]) {
+  const s = store.supplies.find((s) => s.id === id);
+  if (s) s.status = status;
 }
 
 // ─── Purchases ───────────────────────────────────────────────────────────────
@@ -746,6 +810,7 @@ export function mockCreateSupply(data: {
     category: data.category || null,
     lotNumber: data.lotNumber || null,
     expiryDate: data.expiryDate || null,
+    status: "en_deposito",
     createdAt: new Date(),
     deletedAt: null,
   };

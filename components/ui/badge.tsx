@@ -17,6 +17,7 @@ const badgeVariants = cva(
         paid: "border-transparent bg-green-100 text-green-800",
         cancelled: "border-transparent bg-red-100 text-red-800",
         deposited: "border-transparent bg-blue-100 text-blue-800",
+        delivered: "border-transparent bg-green-100 text-green-800",
       },
     },
     defaultVariants: {

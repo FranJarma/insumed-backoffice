@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { XCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, Receipt } from "lucide-react";
+import { XCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, Receipt, PackageCheck, RotateCcw } from "lucide-react";
 
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -14,7 +14,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { CancelSaleDialog } from "./CancelSaleDialog";
 import { EditSaleDialog } from "./EditSaleDialog";
 import { InvoiceSaleDialog } from "./InvoiceSaleDialog";
-import { deleteSale } from "../actions";
+import { deleteSale, markSaleAsDelivered, revertSaleDelivery } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadSalesExcel, downloadSalesPdf } from "@/lib/download";
 import { fileUrl } from "@/lib/upload";
@@ -40,16 +40,20 @@ type SaleRow = {
   creditNoteNumber: string | null;
   cancellationDate: string | null;
   creditNoteUrl: string | null;
+  deliveredAt?: Date | string | null;
   items?: Array<{ id: string; supplyId: string | null; pm: string; supplyName: string; quantity: string; unitPrice: string; priceWithVat?: string | null; subtotal: string }>;
 };
 
 type ClientOption = { id: string; name: string; cuit: string };
+
+type CategoryOption = { id: string; name: string };
 
 interface SalesTableProps {
   sales: SaleRow[];
   clients: ClientOption[];
   patients: PatientOption[];
   supplies: MockSupply[];
+  categories: CategoryOption[];
 }
 
 const STATUS_LABELS: Record<SaleStatus, string> = {
@@ -76,7 +80,7 @@ function currentMonthKey() {
 
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
-export function SalesTable({ sales, clients, patients, supplies }: SalesTableProps) {
+export function SalesTable({ sales, clients, patients, supplies, categories }: SalesTableProps) {
   const router = useRouter();
   const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
   const [invoiceSaleId, setInvoiceSaleId] = useState<string | null>(null);
@@ -315,6 +319,9 @@ export function SalesTable({ sales, clients, patients, supplies }: SalesTablePro
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <Badge variant={STATUS_VARIANT[sale.status]}>{STATUS_LABELS[sale.status]}</Badge>
+                        {sale.deliveredAt && (
+                          <Badge variant="delivered">Entregado</Badge>
+                        )}
                         {sale.status === "CANCELLED" && sale.creditNoteNumber && (
                           <div className="flex flex-col gap-1">
                             <span className="font-mono text-xs text-muted-foreground">{sale.creditNoteNumber}</span>
@@ -340,6 +347,25 @@ export function SalesTable({ sales, clients, patients, supplies }: SalesTablePro
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {/* Entrega: toggle entre marcar y revertir */}
+                        {sale.status !== "CANCELLED" && !sale.deliveredAt && (
+                          <Tooltip label="Marcar pedido como entregado">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-green-600 hover:text-green-700"
+                              onClick={async () => { await markSaleAsDelivered(sale.id); router.refresh(); }}>
+                              <PackageCheck className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {sale.deliveredAt && (
+                          <Tooltip label="Revertir entrega">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700"
+                              onClick={async () => { await revertSaleDelivery(sale.id); router.refresh(); }}>
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                        )}
                         {/* Pendiente de Facturar: botón Facturar */}
                         {sale.status === "PENDING_INVOICE" && (
                           <Tooltip label="Facturar">
@@ -407,6 +433,7 @@ export function SalesTable({ sales, clients, patients, supplies }: SalesTablePro
         clients={clients}
         patients={patients}
         supplies={supplies}
+        categories={categories}
         onOpenChange={(o) => !o && setEditSale(null)}
       />
 

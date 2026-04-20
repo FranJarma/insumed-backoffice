@@ -9,6 +9,12 @@ export const SUPPLY_CATEGORIES = [
   "Varios",
 ] as const;
 
+export const SUPPLY_STATUS_LABELS: Record<string, string> = {
+  en_deposito: "En depósito",
+  en_entrega: "En entrega",
+  entregado: "Entregado",
+};
+
 export const createSupplySchema = z.object({
   pm: z.string().min(1, "El PM es requerido"),
   name: z.string().min(1, "El nombre es requerido"),

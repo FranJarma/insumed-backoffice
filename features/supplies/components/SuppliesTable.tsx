@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, PackageCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,17 +15,36 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { EditSupplyDialog } from "./EditSupplyDialog";
-import { deleteSupply } from "../actions";
+import { deleteSupply, updateSupplyStatus } from "../actions";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { SUPPLY_STATUS_LABELS } from "../types";
 import type { MockSupply } from "@/db/mock-store";
 
+type SupplyWithStatus = MockSupply & { status?: string };
+
+const STATUS_STYLES: Record<string, string> = {
+  en_deposito: "bg-blue-100 text-blue-700",
+  en_entrega: "bg-amber-100 text-amber-700",
+  entregado: "bg-green-100 text-green-700",
+};
+
+function SupplyStatusBadge({ status }: { status: string }) {
+  const label = SUPPLY_STATUS_LABELS[status] ?? status;
+  const style = STATUS_STYLES[status] ?? "bg-muted text-muted-foreground";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${style}`}>
+      {label}
+    </span>
+  );
+}
+
 interface SuppliesTableProps {
-  supplies: MockSupply[];
+  supplies: SupplyWithStatus[];
 }
 
 export function SuppliesTable({ supplies }: SuppliesTableProps) {
   const router = useRouter();
-  const [editSupply, setEditSupply] = useState<MockSupply | null>(null);
+  const [editSupply, setEditSupply] = useState<SupplyWithStatus | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const categoryTotals = useMemo(() => {
@@ -50,20 +69,19 @@ export function SuppliesTable({ supplies }: SuppliesTableProps) {
 
   return (
     <>
-      {/* Tabla principal */}
       <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-28">PM</TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead>Descripción</TableHead>
               <TableHead>Categoría</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead>Nº Lote</TableHead>
               <TableHead className="text-right">Precio Unit.</TableHead>
               <TableHead className="text-right">Precio c/IVA</TableHead>
               <TableHead>Vencimiento</TableHead>
-              <TableHead className="w-24 text-right">Acciones</TableHead>
+              <TableHead className="w-32 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -71,7 +89,6 @@ export function SuppliesTable({ supplies }: SuppliesTableProps) {
               <TableRow key={s.id}>
                 <TableCell className="font-mono text-sm font-medium">{s.pm}</TableCell>
                 <TableCell className="font-medium">{s.name}</TableCell>
-                <TableCell className="text-muted-foreground text-sm">{s.description ?? "—"}</TableCell>
                 <TableCell>
                   {s.category ? (
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -80,6 +97,9 @@ export function SuppliesTable({ supplies }: SuppliesTableProps) {
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
+                </TableCell>
+                <TableCell>
+                  <SupplyStatusBadge status={s.status ?? "en_deposito"} />
                 </TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">{s.lotNumber ?? "—"}</TableCell>
                 <TableCell className="text-right font-medium">{formatCurrency(s.unitPrice)}</TableCell>
@@ -91,6 +111,18 @@ export function SuppliesTable({ supplies }: SuppliesTableProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
+                    {s.status === "en_entrega" && (
+                      <Tooltip label="Marcar como entregado">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-green-600 hover:text-green-700"
+                          onClick={async () => { await updateSupplyStatus(s.id, "entregado"); router.refresh(); }}
+                        >
+                          <PackageCheck className="h-3.5 w-3.5" />
+                        </Button>
+                      </Tooltip>
+                    )}
                     <Tooltip label="Editar">
                       <Button
                         size="sm"

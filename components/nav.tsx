@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -13,6 +14,8 @@ import {
   Landmark,
   UserRound,
   Package,
+  Tag,
+  ChevronDown,
   LogOut,
   UserCircle,
 } from "lucide-react";
@@ -20,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { logout } from "@/features/auth/actions";
 import type { SessionUser } from "@/lib/auth";
 
-const links = [
+const topLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/sales", label: "Ventas", icon: TrendingUp },
   { href: "/purchases", label: "Compras", icon: ShoppingCart },
@@ -28,7 +31,9 @@ const links = [
   { href: "/checks", label: "Cheques", icon: FileCheck },
   { href: "/clients", label: "Clientes", icon: Users },
   { href: "/patients", label: "Pacientes", icon: UserRound },
-  { href: "/supplies", label: "Insumos", icon: Package },
+];
+
+const bottomLinks = [
   { href: "/providers", label: "Proveedores", icon: Truck },
   { href: "/banks", label: "Bancos", icon: Landmark },
 ];
@@ -45,6 +50,8 @@ interface NavProps {
 
 export function Nav({ user }: NavProps) {
   const pathname = usePathname();
+  const isSupplyRoute = pathname.startsWith("/supplies") || pathname.startsWith("/supply-");
+  const [supplyOpen, setSupplyOpen] = useState(isSupplyRoute);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 flex w-56 flex-col border-r bg-background">
@@ -67,7 +74,72 @@ export function Nav({ user }: NavProps) {
 
       <nav className="flex-1 overflow-y-auto p-3">
         <ul className="space-y-1">
-          {links.map(({ href, label, icon: Icon }) => (
+          {topLinks.map(({ href, label, icon: Icon }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  pathname === href || pathname.startsWith(href + "/")
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            </li>
+          ))}
+
+          {/* Insumos con submenú */}
+          <li>
+            <div className="flex items-stretch rounded-md">
+              <Link
+                href="/supplies"
+                className={cn(
+                  "flex flex-1 items-center gap-3 rounded-l-md px-3 py-2 text-sm font-medium transition-colors",
+                  isSupplyRoute
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <Package className="h-4 w-4" />
+                Insumos
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSupplyOpen((v) => !v)}
+                className={cn(
+                  "flex items-center rounded-r-md px-3 transition-colors",
+                  isSupplyRoute
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", supplyOpen && "rotate-180")} />
+              </button>
+            </div>
+            {supplyOpen && (
+              <ul className="mt-1 space-y-1 pl-7">
+                <li>
+                  <Link
+                    href="/supply-categories"
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      pathname === "/supply-categories"
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <Tag className="h-3.5 w-3.5" />
+                    Categorías
+                  </Link>
+                </li>
+              </ul>
+            )}
+          </li>
+
+          {bottomLinks.map(({ href, label, icon: Icon }) => (
             <li key={href}>
               <Link
                 href={href}

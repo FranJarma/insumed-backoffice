@@ -7,6 +7,7 @@ import {
   mockCreateSupply,
   mockUpdateSupply,
   mockSoftDeleteSupply,
+  mockUpdateSupplyStatus,
 } from "@/db/mock-store";
 import { getDb } from "@/db";
 import { supplies } from "@/db/schema";
@@ -93,6 +94,20 @@ export async function deleteSupply(id: string) {
       .update(supplies)
       .set({ deletedAt: new Date() })
       .where(eq(supplies.id, id));
+  }
+
+  revalidatePath("/supplies");
+  return { success: true };
+}
+
+export async function updateSupplyStatus(id: string, status: "en_deposito" | "en_entrega" | "entregado") {
+  const auth = await authorizeAction("supplies:update");
+  if ("error" in auth) return auth;
+
+  if (USE_MOCK) {
+    mockUpdateSupplyStatus(id, status);
+  } else {
+    await getDb().update(supplies).set({ status }).where(eq(supplies.id, id));
   }
 
   revalidatePath("/supplies");

@@ -10,6 +10,7 @@ export const RESOURCES = [
   "banks",
   "checks",
   "files",
+  "supply_categories",
 ] as const;
 
 export type Resource = (typeof RESOURCES)[number];

@@ -2,17 +2,19 @@ import { getClients } from "@/features/clients/actions";
 import { getPatients } from "@/features/patients/actions";
 import { getSalesWithClients } from "@/features/sales/actions";
 import { getSupplies } from "@/features/supplies/actions";
+import { getSupplyCategories } from "@/features/supply-categories/actions";
 import { CreateSaleDialog } from "@/features/sales/components/CreateSaleDialog";
 import { SalesTable } from "@/features/sales/components/SalesTable";
 import { requirePermission } from "@/lib/auth";
 
 export default async function SalesPage() {
   await requirePermission("sales:read");
-  const [salesData, clientsData, patientsData, suppliesData] = await Promise.all([
+  const [salesData, clientsData, patientsData, suppliesData, categoriesData] = await Promise.all([
     getSalesWithClients(),
     getClients(),
     getPatients(),
     getSupplies(),
+    getSupplyCategories(),
   ]);
 
   return (
@@ -24,9 +26,9 @@ export default async function SalesPage() {
             Gestión de facturas y cuentas a cobrar
           </p>
         </div>
-        <CreateSaleDialog clients={clientsData} patients={patientsData} supplies={suppliesData} />
+        <CreateSaleDialog clients={clientsData} patients={patientsData} supplies={suppliesData} categories={categoriesData} />
       </div>
-      <SalesTable sales={salesData} clients={clientsData} patients={patientsData} supplies={suppliesData} />
+      <SalesTable sales={salesData} clients={clientsData} patients={patientsData} supplies={suppliesData} categories={categoriesData} />
     </div>
   );
 }

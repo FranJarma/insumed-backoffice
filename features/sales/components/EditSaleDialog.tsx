@@ -22,6 +22,7 @@ import { formatCurrency } from "@/lib/utils";
 
 type ClientOption = { id: string; name: string; cuit: string };
 type PatientOption = { id: string; name: string; clientId: string };
+type CategoryOption = { id: string; name: string };
 
 type SaleItem = {
   id: string;
@@ -53,6 +54,7 @@ interface EditSaleDialogProps {
   clients: ClientOption[];
   patients: PatientOption[];
   supplies: MockSupply[];
+  categories: CategoryOption[];
   onOpenChange: (open: boolean) => void;
 }
 
@@ -76,10 +78,11 @@ function calcSubtotal(item: Omit<ItemDraft, "subtotal">, invoiceType: "A" | "B")
   return parseFloat((item.quantity * price).toFixed(2));
 }
 
-export function EditSaleDialog({ sale, clients, patients, supplies, onOpenChange }: EditSaleDialogProps) {
+export function EditSaleDialog({ sale, clients, patients, supplies, categories, onOpenChange }: EditSaleDialogProps) {
   const router = useRouter();
   const [localClientId, setLocalClientId] = useState<string>(sale?.clientId ?? "");
   const [items, setItems] = useState<ItemDraft[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSupplyId, setSelectedSupplyId] = useState("");
   const [itemQty, setItemQty] = useState("1");
   const [itemError, setItemError] = useState("");
@@ -105,6 +108,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, onOpenChange
     } else {
       setItems([]);
     }
+    setSelectedCategory("");
     setSelectedSupplyId("");
     setItemQty("1");
     setItemError("");
@@ -305,19 +309,32 @@ export function EditSaleDialog({ sale, clients, patients, supplies, onOpenChange
 
               <div className="space-y-2">
                 <select
+                  value={selectedCategory}
+                  onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSupplyId(""); setItemError(""); }}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Todas las categorías</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                <select
                   value={selectedSupplyId}
                   onChange={(e) => { setSelectedSupplyId(e.target.value); setItemError(""); }}
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="">Seleccionar insumo por PM o nombre...</option>
-                  {supplies.map((s) => {
-                    const displayPrice = invoiceType === "B" && s.priceWithVat ? s.priceWithVat : s.unitPrice;
-                    return (
-                      <option key={s.id} value={s.id}>
-                        {s.pm} — {s.name}{s.category ? ` (${s.category})` : ""} · {formatCurrency(displayPrice)}
-                      </option>
-                    );
-                  })}
+                  <option value="">Seleccionar insumo...</option>
+                  {supplies
+                    .filter((s) => (s as any).status === "en_deposito" || !(s as any).status)
+                    .filter((s) => !selectedCategory || s.category === selectedCategory)
+                    .map((s) => {
+                      const displayPrice = invoiceType === "B" && s.priceWithVat ? s.priceWithVat : s.unitPrice;
+                      return (
+                        <option key={s.id} value={s.id}>
+                          {s.pm} — {s.name} · {formatCurrency(displayPrice)}
+                        </option>
+                      );
+                    })}
                 </select>
                 <div className="flex items-end gap-2">
                   <div className="space-y-1.5">
@@ -441,7 +458,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, onOpenChange
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="edit-invoiceDate">Fecha de facturaciÃ³n <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="edit-invoiceDate">Fecha de facturación <span className="text-destructive">*</span></Label>
                     <Input id="edit-invoiceDate" type="date" {...register("invoiceDate")} />
                     {errors.invoiceDate && (
                       <p className="text-xs text-destructive">{errors.invoiceDate.message}</p>
