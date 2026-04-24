@@ -48,9 +48,11 @@ export type MockSale = {
   oc: string | null;
   patient: string | null;
   amount: string;
-  status: "PENDING_INVOICE" | "PENDING" | "INVOICED" | "PAID" | "CANCELLED";
+  status: "PENDING_INVOICE" | "PENDING" | "INVOICED" | "PAID" | "INVOICED_PAID" | "CANCELLED";
+  paymentDate: string | null;
   documentUrl: string | null;
   creditNoteNumber: string | null;
+  creditNoteAmount: string | null;
   cancellationDate: string | null;
   creditNoteUrl: string | null;
   deliveredAt: Date | null;
@@ -221,9 +223,11 @@ function initStore(): Store {
     { id: "s14", clientId: "c3", invoiceType: "B", invoiceNumber: "FC-B-00005", date: thisMonth(7), oc: "OC-2025-014", patient: "Álvarez, Claudia", amount: "455000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
     { id: "s15", clientId: "c4", invoiceType: "B", invoiceNumber: "FC-B-00006", date: thisMonth(8), oc: "OC-2025-015", patient: "Vargas, Eduardo", amount: "143000.00", status: "PENDING", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
     { id: "s16", clientId: "c5", invoiceType: "B", invoiceNumber: "FC-B-00007", date: thisMonth(10), oc: "OC-2025-016", patient: "Castro, Valeria", amount: "275000.00", status: "PAID", documentUrl: null, creditNoteNumber: null, creditNoteUrl: null, createdAt: new Date(), deletedAt: null, deliveredAt: null },
-  ] satisfies Array<Omit<MockSale, "invoiceDate" | "cancellationDate">>).map((sale) => ({
+  ] satisfies Array<Omit<MockSale, "invoiceDate" | "cancellationDate" | "creditNoteAmount" | "paymentDate"> & { creditNoteAmount?: string | null; paymentDate?: string | null }>).map((sale) => ({
     invoiceDate: sale.invoiceNumber ? sale.date : null,
     cancellationDate: sale.status === "CANCELLED" ? sale.date : null,
+    creditNoteAmount: "creditNoteAmount" in sale && typeof sale.creditNoteAmount === "string" ? sale.creditNoteAmount : null,
+    paymentDate: "paymentDate" in sale && typeof sale.paymentDate === "string" ? sale.paymentDate : sale.status === "PAID" ? sale.date : null,
     ...sale,
   })) satisfies MockSale[];
 
@@ -473,6 +477,8 @@ export function mockCreateSale(
     amount: string;
     documentUrl?: string;
     isInvoiced?: boolean;
+    isPaid?: boolean;
+    paymentDate?: string;
   },
   items: Array<{
     supplyId: string;
@@ -495,9 +501,11 @@ export function mockCreateSale(
     oc: data.oc || null,
     patient: data.patient || null,
     amount: data.amount,
-    status: data.isInvoiced ? "INVOICED" : "PENDING_INVOICE",
+    status: data.isInvoiced && data.isPaid ? "INVOICED_PAID" : data.isPaid ? "PAID" : data.isInvoiced ? "INVOICED" : "PENDING_INVOICE",
+    paymentDate: data.isPaid ? (data.paymentDate || data.date) : null,
     documentUrl: data.documentUrl || null,
     creditNoteNumber: null,
+    creditNoteAmount: null,
     cancellationDate: null,
     creditNoteUrl: null,
     deliveredAt: null,
@@ -525,7 +533,7 @@ export function mockCreateSale(
 }
 export function mockUpdateSale(
   id: string,
-  data: { clientId: string; invoiceType: "A" | "B"; invoiceNumber?: string; invoiceDate?: string; date: string; oc?: string; patient?: string; amount: string; documentUrl?: string; isInvoiced?: boolean; },
+  data: { clientId: string; invoiceType: "A" | "B"; invoiceNumber?: string; invoiceDate?: string; date: string; oc?: string; patient?: string; amount: string; documentUrl?: string; isInvoiced?: boolean; isPaid?: boolean; paymentDate?: string; },
   items: Array<{ supplyId: string; pm: string; supplyName: string; quantity: string; unitPrice: string; priceWithVat?: string; subtotal: string; }> = []
 ) {
   const s = store.sales.find((s) => s.id === id);
@@ -539,10 +547,11 @@ export function mockUpdateSale(
       oc: data.oc || null,
       patient: data.patient || null,
       amount: data.amount,
+      paymentDate: data.isPaid ? (data.paymentDate || s.paymentDate || data.date) : null,
       documentUrl: data.documentUrl || null,
     });
-    if (s.status === "PENDING_INVOICE" || s.status === "INVOICED") {
-      s.status = data.isInvoiced ? "INVOICED" : "PENDING_INVOICE";
+    if (s.status === "PENDING_INVOICE" || s.status === "INVOICED" || s.status === "PAID" || s.status === "INVOICED_PAID" || s.status === "PENDING") {
+      s.status = data.isInvoiced && data.isPaid ? "INVOICED_PAID" : data.isPaid ? "PAID" : data.isInvoiced ? "INVOICED" : "PENDING_INVOICE";
     }
   }
   // Revert old supply statuses
@@ -577,7 +586,7 @@ export function mockUpdateSale(
 export function mockMarkSaleAsInvoiced(id: string, data: { invoiceNumber: string; invoiceDate: string; documentUrl?: string }) {
   const s = store.sales.find((s) => s.id === id);
   if (s) {
-    s.status = "INVOICED";
+    s.status = s.status === "PAID" ? "INVOICED_PAID" : "INVOICED";
     s.invoiceNumber = data.invoiceNumber;
     s.invoiceDate = data.invoiceDate;
     if (data.documentUrl) s.documentUrl = data.documentUrl;
@@ -594,12 +603,15 @@ export function mockSoftDeleteSale(id: string) {
   const s = store.sales.find((s) => s.id === id);
   if (s) s.deletedAt = new Date();
 }
-export function mockMarkSaleAsPaid(id: string) {
+export function mockMarkSaleAsPaid(id: string, data: { paymentDate: string }) {
   const s = store.sales.find((s) => s.id === id);
-  if (s) s.status = "PAID";
+  if (s) {
+    s.status = s.status === "INVOICED" || s.status === "PENDING" ? "INVOICED_PAID" : "PAID";
+    s.paymentDate = data.paymentDate;
+  }
 }
 
-export function mockCancelSale(id: string, data: { creditNoteNumber: string; cancellationDate: string; creditNoteUrl?: string }) {
+export function mockCancelSale(id: string, data: { creditNoteNumber: string; creditNoteAmount: string; cancellationDate: string; creditNoteUrl?: string }) {
   const saleItems = store.saleItems.filter((i) => i.saleId === id);
   for (const item of saleItems) {
     if (item.supplyId) {
@@ -611,6 +623,7 @@ export function mockCancelSale(id: string, data: { creditNoteNumber: string; can
   if (s) {
     s.status = "CANCELLED";
     s.creditNoteNumber = data.creditNoteNumber;
+    s.creditNoteAmount = data.creditNoteAmount;
     s.cancellationDate = data.cancellationDate;
     s.creditNoteUrl = data.creditNoteUrl ?? null;
   }

@@ -161,6 +161,21 @@ export function CancelSaleDialog({
           </div>
 
           <div className="space-y-1.5">
+            <Label htmlFor="creditNoteAmount">Monto de Nota de Crédito <span className="text-destructive">*</span></Label>
+            <Input
+              id="creditNoteAmount"
+              type="number"
+              step="0.01"
+              min="0"
+              {...register("creditNoteAmount")}
+              placeholder="150000.00"
+            />
+            {errors.creditNoteAmount && (
+              <p className="text-xs text-destructive">{errors.creditNoteAmount.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
             <Label>
               Archivo de Nota de Crédito <span className="text-xs text-muted-foreground">(opcional)</span>
             </Label>

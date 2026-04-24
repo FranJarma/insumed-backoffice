@@ -39,7 +39,8 @@ type SaleRow = {
   oc: string | null;
   patient: string | null;
   amount: string;
-  status: "PENDING_INVOICE" | "PENDING" | "INVOICED" | "PAID" | "CANCELLED";
+  status: "PENDING_INVOICE" | "PENDING" | "INVOICED" | "PAID" | "INVOICED_PAID" | "CANCELLED";
+  paymentDate?: string | null;
   items?: Array<{ supplyName: string; quantity: string }>;
 };
 
@@ -49,7 +50,14 @@ const PAYMENT_LABELS: Record<string, string> = {
   EFECTIVO: "Efectivo",
 };
 const PURCHASE_STATUS: Record<string, string> = { PENDING: "Pendiente", PAID: "Pagado" };
-const SALE_STATUS: Record<string, string> = { PENDING_INVOICE: "Pend. Facturar", PENDING: "Facturada", INVOICED: "Facturada", PAID: "Facturada", CANCELLED: "Anulada" };
+const SALE_STATUS: Record<string, string> = {
+  PENDING_INVOICE: "Pend. Facturar",
+  PENDING: "Facturada",
+  INVOICED: "Facturada",
+  PAID: "Pagada",
+  INVOICED_PAID: "Facturada y Pagada",
+  CANCELLED: "Anulada",
+};
 
 // ─── Purchases Excel ─────────────────────────────────────────────────────────
 
@@ -147,12 +155,13 @@ export function downloadSalesExcel(
       : "",
     Monto: parseFloat(s.amount),
     Estado: SALE_STATUS[s.status] ?? s.status,
+    "Fecha Pago": s.paymentDate ? formatDate(s.paymentDate) : "",
   }));
 
   const ws = XLSX.utils.json_to_sheet(data);
   ws["!cols"] = [
     { wch: 25 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
-    { wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 12 },
+    { wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 18 }, { wch: 12 },
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Ventas");
@@ -178,7 +187,7 @@ export function downloadSalesPdf(
   }
 
   const totalPaid = sales
-    .filter((s) => s.status === "PAID")
+    .filter((s) => s.status === "PAID" || s.status === "INVOICED_PAID")
     .reduce((sum, s) => sum + parseFloat(s.amount), 0);
   const totalPending = sales
     .filter((s) => s.status === "INVOICED" || s.status === "PENDING" || s.status === "PENDING_INVOICE")
@@ -186,7 +195,7 @@ export function downloadSalesPdf(
 
   autoTable(doc, {
     startY: clientLabel !== "todos" ? 27 : 22,
-    head: [["Cliente", "Tipo", "Nº Factura", "Fecha", "Paciente", "OC", "Insumos", "Monto", "Estado"]],
+    head: [["Cliente", "Tipo", "Nº Factura", "Fecha", "Paciente", "OC", "Insumos", "Monto", "Estado", "Fecha Pago"]],
     body: [
       ...sales.map((s) => [
         s.clientName ?? "—",
@@ -200,10 +209,11 @@ export function downloadSalesPdf(
           : "—",
         formatCurrency(s.amount),
         SALE_STATUS[s.status] ?? s.status,
+        s.paymentDate ? formatDate(s.paymentDate) : "—",
       ]),
-      ["", "", "", "", "", "Subtotal Facturadas", "", formatCurrency(totalPaid), ""],
-      ["", "", "", "", "", "Subtotal Pend. Facturar", "", formatCurrency(totalPending), ""],
-      ["", "", "", "", "", "Total", "", formatCurrency(totalPaid + totalPending), ""],
+      ["", "", "", "", "", "Subtotal Pagadas", "", formatCurrency(totalPaid), "", ""],
+      ["", "", "", "", "", "Subtotal Pendiente", "", formatCurrency(totalPending), "", ""],
+      ["", "", "", "", "", "Total", "", formatCurrency(totalPaid + totalPending), "", ""],
     ],
     styles: { fontSize: 9 },
     headStyles: { fillColor: [30, 41, 59] },

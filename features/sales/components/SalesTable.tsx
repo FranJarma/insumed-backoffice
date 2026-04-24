@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { XCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, Receipt, PackageCheck, RotateCcw } from "lucide-react";
+import { XCircle, ChevronLeft, ChevronRight, CircleDollarSign, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, Receipt, PackageCheck, RotateCcw } from "lucide-react";
 
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -14,6 +14,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { CancelSaleDialog } from "./CancelSaleDialog";
 import { EditSaleDialog } from "./EditSaleDialog";
 import { InvoiceSaleDialog } from "./InvoiceSaleDialog";
+import { MarkSaleAsPaidDialog } from "./MarkSaleAsPaidDialog";
 import { deleteSale, markSaleAsDelivered, revertSaleDelivery } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadSalesExcel, downloadSalesPdf } from "@/lib/download";
@@ -22,7 +23,7 @@ import type { MockSupply } from "@/db/mock-store";
 
 type PatientOption = { id: string; name: string; clientId: string };
 
-type SaleStatus = "PENDING_INVOICE" | "PENDING" | "INVOICED" | "PAID" | "CANCELLED";
+type SaleStatus = "PENDING_INVOICE" | "PENDING" | "INVOICED" | "PAID" | "INVOICED_PAID" | "CANCELLED";
 
 type SaleRow = {
   id: string;
@@ -36,8 +37,10 @@ type SaleRow = {
   patient: string | null;
   amount: string;
   status: SaleStatus;
+  paymentDate: string | null;
   documentUrl: string | null;
   creditNoteNumber: string | null;
+  creditNoteAmount: string | null;
   cancellationDate: string | null;
   creditNoteUrl: string | null;
   deliveredAt?: Date | string | null;
@@ -60,17 +63,23 @@ const STATUS_LABELS: Record<SaleStatus, string> = {
   PENDING_INVOICE: "Pend. Facturar",
   PENDING: "Facturada",      // legacy
   INVOICED: "Facturada",
-  PAID: "Facturada",         // legacy
+  PAID: "Pagada",
+  INVOICED_PAID: "Facturada y Pagada",
   CANCELLED: "Anulada",
 };
 
-const STATUS_VARIANT: Record<SaleStatus, "pending_invoice" | "invoiced" | "cancelled"> = {
+const STATUS_VARIANT: Record<SaleStatus, "pending_invoice" | "invoiced" | "paid" | "cancelled"> = {
   PENDING_INVOICE: "pending_invoice",
   PENDING: "invoiced",
   INVOICED: "invoiced",
-  PAID: "invoiced",
+  PAID: "paid",
+  INVOICED_PAID: "paid",
   CANCELLED: "cancelled",
 };
+
+const isPaidStatus = (status: SaleStatus) => status === "PAID" || status === "INVOICED_PAID";
+const isInvoicedStatus = (status: SaleStatus) =>
+  status === "INVOICED" || status === "INVOICED_PAID" || status === "PENDING";
 
 function currentYear() { return new Date().getFullYear(); }
 function currentMonthKey() {
@@ -84,12 +93,13 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
   const router = useRouter();
   const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
   const [invoiceSaleId, setInvoiceSaleId] = useState<string | null>(null);
+  const [paySaleId, setPaySaleId] = useState<string | null>(null);
   const [editSale, setEditSale] = useState<SaleRow | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [selectedClient, setSelectedClient] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState<"all" | "PENDING_INVOICE" | "INVOICED" | "CANCELLED">("all");
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "PENDING_INVOICE" | "INVOICED" | "PAID" | "INVOICED_PAID" | "CANCELLED">("all");
   const [selectedInvoiceType, setSelectedInvoiceType] = useState<"all" | "A" | "B">("all");
 
   const effectiveMonth = `${selectedYear}-${selectedMonth.slice(5)}`;
@@ -107,7 +117,11 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         const matchStatus =
           selectedStatus === "all" ||
           (selectedStatus === "INVOICED"
-            ? s.status === "INVOICED" || s.status === "PAID" || s.status === "PENDING"
+            ? s.status === "INVOICED" || s.status === "PENDING"
+            : selectedStatus === "PAID"
+            ? s.status === "PAID"
+            : selectedStatus === "INVOICED_PAID"
+            ? s.status === "INVOICED_PAID"
             : s.status === selectedStatus);
         const matchInvoiceType = selectedInvoiceType === "all" || s.invoiceType === selectedInvoiceType;
         return matchMonth && matchClient && matchStatus && matchInvoiceType;
@@ -118,7 +132,7 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
   const totalInvoiced = useMemo(
     () =>
       filtered
-        .filter((s) => s.status === "INVOICED" || s.status === "PAID" || s.status === "PENDING")
+        .filter((s) => isInvoicedStatus(s.status))
         .reduce((sum, s) => sum + parseFloat(s.amount), 0),
     [filtered]
   );
@@ -129,7 +143,13 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         .reduce((sum, s) => sum + parseFloat(s.amount), 0),
     [filtered]
   );
-  const total = totalInvoiced + totalPendingInvoice;
+  const total = useMemo(
+    () =>
+      filtered
+        .filter((s) => s.status !== "CANCELLED")
+        .reduce((sum, s) => sum + parseFloat(s.amount), 0),
+    [filtered]
+  );
 
   const handleMonthNav = (direction: "prev" | "next") => {
     const newMonth = direction === "prev" ? prevMonth(effectiveMonth) : nextMonth(effectiveMonth);
@@ -142,9 +162,9 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
 
   // Whether a sale can be invoiced (pending invoice) or edited/cancelled (editable states)
   const isEditableStatus = (status: SaleStatus) =>
-    status === "PENDING_INVOICE" || status === "INVOICED" || status === "PENDING";
+    status === "PENDING_INVOICE" || status === "INVOICED" || status === "PAID" || status === "INVOICED_PAID" || status === "PENDING";
   const isCancellableStatus = (status: SaleStatus) =>
-    status === "INVOICED" || status === "PAID" || status === "PENDING";
+    status === "INVOICED" || status === "PAID" || status === "INVOICED_PAID" || status === "PENDING";
 
   return (
     <>
@@ -206,6 +226,8 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
           <option value="all">Todos los estados</option>
           <option value="PENDING_INVOICE">Pend. Facturar</option>
           <option value="INVOICED">Facturadas</option>
+          <option value="PAID">Pagadas</option>
+          <option value="INVOICED_PAID">Fact. y Pagadas</option>
           <option value="CANCELLED">Anuladas</option>
         </select>
 
@@ -319,6 +341,11 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <Badge variant={STATUS_VARIANT[sale.status]}>{STATUS_LABELS[sale.status]}</Badge>
+                        {isPaidStatus(sale.status) && sale.paymentDate && (
+                          <span className="text-xs text-muted-foreground">
+                            Pagada: {formatDate(sale.paymentDate)}
+                          </span>
+                        )}
                         {sale.deliveredAt && (
                           <Badge variant="delivered">Entregado</Badge>
                         )}
@@ -328,6 +355,11 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                             {sale.cancellationDate && (
                               <span className="text-xs text-muted-foreground">
                                 Anulada: {formatDate(sale.cancellationDate)}
+                              </span>
+                            )}
+                            {sale.creditNoteAmount && (
+                              <span className="text-xs font-semibold text-red-700">
+                                NC: {formatCurrency(sale.creditNoteAmount)}
                               </span>
                             )}
                             {sale.creditNoteUrl && (
@@ -367,7 +399,16 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                           </Tooltip>
                         )}
                         {/* Pendiente de Facturar: botón Facturar */}
-                        {sale.status === "PENDING_INVOICE" && (
+                        {!isPaidStatus(sale.status) && sale.status !== "CANCELLED" && (
+                          <Tooltip label="Marcar como pagada">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-green-700 hover:text-green-800"
+                              onClick={() => setPaySaleId(sale.id)}>
+                              <CircleDollarSign className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {(sale.status === "PENDING_INVOICE" || sale.status === "PAID") && (
                           <Tooltip label="Facturar">
                             <Button size="sm" variant="ghost"
                               className="h-7 w-7 p-0 text-primary hover:text-primary"
@@ -419,6 +460,13 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         open={invoiceSaleId !== null}
         onOpenChange={(open) => !open && setInvoiceSaleId(null)}
         onSuccess={() => { setInvoiceSaleId(null); router.refresh(); }}
+      />
+
+      <MarkSaleAsPaidDialog
+        saleId={paySaleId}
+        open={paySaleId !== null}
+        onOpenChange={(open) => !open && setPaySaleId(null)}
+        onSuccess={() => { setPaySaleId(null); router.refresh(); }}
       />
 
       <CancelSaleDialog

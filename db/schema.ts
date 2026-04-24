@@ -13,7 +13,7 @@ import {
 
 export const userRole = pgEnum("user_role", ["jefe", "operario", "admin"]);
 export const supplyStatus = pgEnum("supply_status", ["en_deposito", "en_entrega", "entregado"]);
-export const saleStatus = pgEnum("sale_status", ["PENDING_INVOICE", "PENDING", "INVOICED", "PAID", "CANCELLED"]);
+export const saleStatus = pgEnum("sale_status", ["PENDING_INVOICE", "PENDING", "INVOICED", "PAID", "INVOICED_PAID", "CANCELLED"]);
 export const invoiceType = pgEnum("invoice_type", ["A", "B"]);
 export const purchaseStatus = pgEnum("purchase_status", ["PENDING", "PAID"]);
 export const purchaseCategory = pgEnum("purchase_category", ["PROVEEDOR", "VARIOS"]);
@@ -95,8 +95,10 @@ export const sales = pgTable("sales", {
   patient: text("patient"),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   status: saleStatus("status").default("PENDING_INVOICE").notNull(),
+  paymentDate: date("payment_date"),
   documentUrl: text("document_url"),
   creditNoteNumber: text("credit_note_number"),
+  creditNoteAmount: numeric("credit_note_amount", { precision: 12, scale: 2 }),
   cancellationDate: date("cancellation_date"),
   creditNoteUrl: text("credit_note_url"),
   deliveredAt: timestamp("delivered_at"),

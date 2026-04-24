@@ -66,6 +66,8 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
     invoiceDate: new Date().toISOString().split("T")[0],
     invoiceType: "A",
     isInvoiced: false,
+    isPaid: false,
+    paymentDate: new Date().toISOString().split("T")[0],
   };
 
   const {
@@ -80,6 +82,7 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
   const clientId = watch("clientId");
   const invoiceType = watch("invoiceType");
   const isInvoiced = watch("isInvoiced");
+  const isPaid = watch("isPaid");
   const watchDate = watch("date");
 
   const itemsTotal = items.reduce((sum, i) => sum + i.subtotal, 0);
@@ -368,6 +371,26 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
 
             {/* Checkbox "Venta facturada" */}
             <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register("isPaid")}
+                  className="h-4 w-4 rounded border-gray-300 accent-primary"
+                />
+                <div>
+                  <span className="text-sm font-medium">Venta pagada</span>
+                  <p className="text-xs text-muted-foreground">Marcá si el pago ya fue recibido, aunque todavia no este facturada.</p>
+                </div>
+              </label>
+
+              {isPaid && (
+                <div className="space-y-1.5 pt-1">
+                  <Label htmlFor="paymentDate">Fecha de pago <span className="text-destructive">*</span></Label>
+                  <Input id="paymentDate" type="date" {...register("paymentDate")} />
+                  {errors.paymentDate && <p className="text-xs text-destructive">{errors.paymentDate.message}</p>}
+                </div>
+              )}
+
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"

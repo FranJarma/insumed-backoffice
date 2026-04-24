@@ -41,6 +41,7 @@ type SaleRow = {
   invoiceType: "A" | "B";
   invoiceNumber: string | null;
   invoiceDate: string | null;
+  paymentDate: string | null;
   date: string;
   oc: string | null;
   patient: string | null;
@@ -89,7 +90,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
 
   const itemsTotal = items.reduce((sum, i) => sum + i.subtotal, 0);
 
-  const isInvoiceable = !sale || sale.status === "PENDING_INVOICE" || sale.status === "INVOICED";
+  const isInvoiceable = !sale || sale.status === "PENDING_INVOICE" || sale.status === "INVOICED" || sale.status === "PAID" || sale.status === "INVOICED_PAID" || sale.status === "PENDING";
 
   // Initialize items when sale changes
   useEffect(() => {
@@ -132,7 +133,9 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
           oc: sale.oc ?? "",
           patient: sale.patient ?? "",
           amount: sale.amount,
-          isInvoiced: sale.status === "INVOICED" || (sale.status !== "PENDING_INVOICE" && !!sale.invoiceNumber),
+          isInvoiced: sale.status === "INVOICED" || sale.status === "INVOICED_PAID" || (sale.status !== "PENDING_INVOICE" && sale.status !== "PAID" && !!sale.invoiceNumber),
+          isPaid: sale.status === "PAID" || sale.status === "INVOICED_PAID",
+          paymentDate: sale.paymentDate ?? sale.date,
         }
       : undefined,
   });
@@ -140,6 +143,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
   const clientId = watch("clientId");
   const invoiceType = watch("invoiceType");
   const isInvoiced = watch("isInvoiced");
+  const isPaid = watch("isPaid");
 
   const handleClientChange = (id: string) => {
     setLocalClientId(id);
@@ -427,6 +431,28 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
             {/* Checkbox "Venta facturada" (solo para estados editables) */}
             {isInvoiceable && (
               <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    {...register("isPaid")}
+                    className="h-4 w-4 rounded border-gray-300 accent-primary"
+                  />
+                  <div>
+                    <span className="text-sm font-medium">Venta pagada</span>
+                    <p className="text-xs text-muted-foreground">Marcá si el pago ya fue recibido.</p>
+                  </div>
+                </label>
+
+                {isPaid && (
+                  <div className="space-y-1.5 pt-1">
+                    <Label htmlFor="edit-paymentDate">Fecha de pago <span className="text-destructive">*</span></Label>
+                    <Input id="edit-paymentDate" type="date" {...register("paymentDate")} />
+                    {errors.paymentDate && (
+                      <p className="text-xs text-destructive">{errors.paymentDate.message}</p>
+                    )}
+                  </div>
+                )}
+
                 <label className="flex items-center gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
