@@ -23,6 +23,7 @@ export const checkStatus = pgEnum("check_status", [
   "PENDIENTE",
   "DEPOSITADO",
   "COBRADO",
+  "PAGADO",
   "RECHAZADO",
 ]);
 
@@ -155,7 +156,7 @@ export const checks = pgTable("checks", {
   bank: text("bank").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   issueDate: date("issue_date").notNull(),
-  dueDate: date("due_date").notNull(),
+  dueDate: date("due_date"),
   estimatedPaymentDate: date("estimated_payment_date"),
   paymentDate: date("payment_date"),
   status: checkStatus("status").default("PENDIENTE").notNull(),

@@ -100,7 +100,6 @@ run("purchase and check schemas only accept their own upload prefixes", () => {
       bank: "Banco",
       amount: "10",
       issueDate: "2026-04-16",
-      dueDate: "2026-04-17",
       photoUrl: chequeKey,
     }).success,
     true
@@ -114,7 +113,6 @@ run("purchase and check schemas only accept their own upload prefixes", () => {
       bank: "Banco",
       amount: "10",
       issueDate: "2026-04-16",
-      dueDate: "2026-04-17",
       photoUrl: remitoKey,
     }).success,
     false

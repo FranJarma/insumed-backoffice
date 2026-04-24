@@ -12,7 +12,6 @@ export const createCheckSchema = z.object({
     .min(1, "El monto es requerido")
     .refine((value) => !Number.isNaN(parseFloat(value)) && parseFloat(value) > 0, "El monto debe ser mayor a 0"),
   issueDate: z.string().min(1, "La fecha de emision es requerida"),
-  dueDate: z.string().min(1, "La fecha de vencimiento es requerida"),
   estimatedPaymentDate: z.string().optional(),
   relatedEntity: z.string().optional(),
   notes: z.string().optional(),
@@ -21,4 +20,4 @@ export const createCheckSchema = z.object({
 
 export type CreateCheckInput = z.infer<typeof createCheckSchema>;
 
-export type CheckStatus = "PENDIENTE" | "DEPOSITADO" | "COBRADO" | "RECHAZADO";
+export type CheckStatus = "PENDIENTE" | "DEPOSITADO" | "COBRADO" | "PAGADO" | "RECHAZADO";

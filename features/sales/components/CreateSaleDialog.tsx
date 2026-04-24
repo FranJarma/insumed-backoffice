@@ -119,7 +119,7 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
   const handleRemoveItem = (index: number) => {
     const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
-    setItemError(newItems.length === 0 ? "Agregá al menos un insumo para continuar." : "");
+    setItemError("");
     setValue("amount", newItems.length > 0 ? newItems.reduce((s, i) => s + i.subtotal, 0).toFixed(2) : "", { shouldValidate: newItems.length > 0 });
   };
 
@@ -163,10 +163,6 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
   };
 
   const onSubmit = async (data: CreateSaleInput) => {
-    if (items.length === 0) {
-      setItemError("Agregá al menos un insumo para continuar.");
-      return;
-    }
     const saleItemInputs: SaleItemInput[] = items.map((i) => ({
       supplyId: i.supplyId, pm: i.pm, supplyName: i.supplyName,
       quantity: i.quantity.toString(), unitPrice: i.unitPrice.toString(),
@@ -183,12 +179,7 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
       setSelectedSupplyId("");
       setItemQty("1");
       router.refresh();
-      return;
     }
-    const itemsError = "error" in result && result.error && "items" in result.error
-      ? result.error.items?.[0]
-      : undefined;
-    if (itemsError) setItemError(itemsError);
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -275,7 +266,7 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
             {/* Insumos */}
             <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
               <div>
-                <p className="text-sm font-semibold">Insumos <span className="text-destructive">*</span></p>
+                <p className="text-sm font-semibold">Insumos <span className="text-xs font-normal text-muted-foreground">(opcional)</span></p>
                 <p className="text-xs text-muted-foreground">
                   {invoiceType === "B"
                     ? "Factura B: se usa el precio con IVA para calcular los subtotales."
@@ -444,7 +435,7 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
 
           <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background shrink-0">
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting || isUploading || items.length === 0 || !isValid}>
+            <Button type="submit" disabled={isSubmitting || isUploading || !isValid}>
               {isSubmitting ? "Guardando..." : "Guardar Venta"}
             </Button>
           </div>

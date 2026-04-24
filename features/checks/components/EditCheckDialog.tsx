@@ -47,7 +47,6 @@ export function EditCheckDialog({ check, banks, clients, providers, onOpenChange
           bank: check.bank,
           amount: check.amount,
           issueDate: check.issueDate,
-          dueDate: check.dueDate,
           estimatedPaymentDate: check.estimatedPaymentDate ?? "",
           relatedEntity: check.relatedEntity ?? "",
           notes: check.notes ?? "",
@@ -151,18 +150,11 @@ export function EditCheckDialog({ check, banks, clients, providers, onOpenChange
               </div>
             </div>
 
-            {/* Fechas */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-issueDate">Fecha de Emisión <span className="text-destructive">*</span></Label>
-                <Input id="edit-issueDate" type="date" {...register("issueDate")} />
-                {errors.issueDate && <p className="text-xs text-destructive">{errors.issueDate.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-dueDate">Fecha de Vencimiento <span className="text-destructive">*</span></Label>
-                <Input id="edit-dueDate" type="date" {...register("dueDate")} />
-                {errors.dueDate && <p className="text-xs text-destructive">{errors.dueDate.message}</p>}
-              </div>
+            {/* Fecha de Emisión */}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-issueDate">Fecha de Emisión <span className="text-destructive">*</span></Label>
+              <Input id="edit-issueDate" type="date" {...register("issueDate")} />
+              {errors.issueDate && <p className="text-xs text-destructive">{errors.issueDate.message}</p>}
             </div>
 
             {/* Fecha est. de cobro/pago */}

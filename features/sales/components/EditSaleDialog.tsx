@@ -182,7 +182,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
   const handleRemoveItem = (index: number) => {
     const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
-    setItemError(newItems.length === 0 ? "Agregá al menos un insumo para continuar." : "");
+    setItemError("");
     if (newItems.length > 0) {
       setValue("amount", newItems.reduce((s, i) => s + i.subtotal, 0).toFixed(2), { shouldValidate: true });
     } else {
@@ -192,10 +192,6 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
 
   const onSubmit = async (data: CreateSaleInput) => {
     if (!sale) return;
-    if (items.length === 0) {
-      setItemError("Agregá al menos un insumo para continuar.");
-      return;
-    }
     const saleItemInputs: SaleItemInput[] = items.map((i) => ({
       supplyId: i.supplyId,
       pm: i.pm,
@@ -209,12 +205,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
     if ("success" in result) {
       onOpenChange(false);
       router.refresh();
-      return;
     }
-    const itemsError = "error" in result && result.error && "items" in result.error
-      ? result.error.items?.[0]
-      : undefined;
-    if (itemsError) setItemError(itemsError);
   };
 
   const priceCol = invoiceType === "B" ? "P. c/IVA" : "P. Unit.";
@@ -476,7 +467,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || items.length === 0}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Guardando..." : "Guardar Cambios"}
             </Button>
           </div>

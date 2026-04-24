@@ -27,11 +27,6 @@ import {
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 const CANCELLABLE_SALE_STATUSES = ["INVOICED", "PAID"] as const;
 const CANCEL_ONLY_INVOICED_ERROR = "Solo se pueden anular facturas de ventas facturadas.";
-const REQUIRED_SALE_ITEMS_ERROR = "Agrega al menos un insumo para continuar.";
-
-function hasRequiredSaleItems(items: SaleItemInput[]) {
-  return items.length > 0;
-}
 
 function canCancelSale(status: string | null | undefined) {
   return !!status && CANCELLABLE_SALE_STATUSES.includes(status as (typeof CANCELLABLE_SALE_STATUSES)[number]);
@@ -102,9 +97,6 @@ export async function createSale(input: unknown, items: SaleItemInput[] = []) {
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
-  if (!hasRequiredSaleItems(items)) {
-    return { error: { items: [REQUIRED_SALE_ITEMS_ERROR] } };
-  }
 
   const auth = await authorizeAction("sales:create");
   if ("error" in auth) {
@@ -165,9 +157,6 @@ export async function updateSale(id: string, input: unknown, items: SaleItemInpu
   const parsed = createSaleSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
-  }
-  if (!hasRequiredSaleItems(items)) {
-    return { error: { items: [REQUIRED_SALE_ITEMS_ERROR] } };
   }
 
   const auth = await authorizeAction("sales:update");

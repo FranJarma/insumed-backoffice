@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2, CircleCheck, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2, CircleCheck, CircleDollarSign, RotateCcw } from "lucide-react";
 import { fileUrl } from "@/lib/upload";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -29,12 +29,14 @@ const STATUS_LABEL: Record<MockCheck["status"], string> = {
   PENDIENTE: "Pendiente",
   DEPOSITADO: "Depositado",
   COBRADO: "Cobrado",
+  PAGADO: "Pagado",
   RECHAZADO: "Rechazado",
 };
 const STATUS_VARIANT: Record<MockCheck["status"], "pending" | "paid" | "cancelled" | "deposited"> = {
   PENDIENTE: "pending",
   DEPOSITADO: "deposited",
   COBRADO: "paid",
+  PAGADO: "paid",
   RECHAZADO: "cancelled",
 };
 
@@ -59,7 +61,7 @@ export function ChecksTable({ checks, banks, clients, providers }: ChecksTablePr
   const filtered = useMemo(
     () =>
       checks.filter((c) => {
-        const matchMonth = c.dueDate.startsWith(effectiveMonth);
+        const matchMonth = c.issueDate.startsWith(effectiveMonth);
         const matchType = typeFilter === "ALL" || c.type === typeFilter;
         return matchMonth && matchType;
       }),
@@ -168,7 +170,7 @@ export function ChecksTable({ checks, banks, clients, providers }: ChecksTablePr
                   <TableHead>N° Op.</TableHead>
                   <TableHead>Banco</TableHead>
                   <TableHead>Entidad</TableHead>
-                  <TableHead>Vencimiento</TableHead>
+                  <TableHead>F. Emisión</TableHead>
                   <TableHead>F. Est. Cobro/Pago</TableHead>
                   <TableHead>F. Cobro/Pago real</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
@@ -196,7 +198,7 @@ export function ChecksTable({ checks, banks, clients, providers }: ChecksTablePr
                     </TableCell>
                     <TableCell className="text-muted-foreground">{check.bank}</TableCell>
                     <TableCell className="text-muted-foreground">{check.relatedEntity ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(check.dueDate)}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(check.issueDate)}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {check.estimatedPaymentDate ? (
                         <span className="text-blue-700 font-medium">{formatDate(check.estimatedPaymentDate)}</span>
@@ -227,12 +229,14 @@ export function ChecksTable({ checks, banks, clients, providers }: ChecksTablePr
                           <Tooltip label={check.type === "RECIBIDO" ? "Marcar cobrado" : "Marcar pagado"}>
                             <Button size="sm" variant="ghost"
                               className="h-7 w-7 p-0 text-green-700 hover:text-green-700"
-                              onClick={() => handleStatus(check.id, "COBRADO")} disabled={isPending}>
-                              <CircleCheck className="h-3.5 w-3.5" />
+                              onClick={() => handleStatus(check.id, check.type === "RECIBIDO" ? "COBRADO" : "PAGADO")} disabled={isPending}>
+                              {check.type === "RECIBIDO"
+                                ? <CircleCheck className="h-3.5 w-3.5" />
+                                : <CircleDollarSign color="blue" className="h-3.5 w-3.5" />}
                             </Button>
                           </Tooltip>
                         )}
-                        {check.status === "COBRADO" && (
+                        {(check.status === "COBRADO" || check.status === "PAGADO") && (
                           <Tooltip label="Marcar pendiente">
                             <Button size="sm" variant="ghost"
                               className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"

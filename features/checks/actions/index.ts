@@ -33,7 +33,7 @@ export async function getChecks() {
     return mockGetChecks();
   }
 
-  return getDb().select().from(checks).where(isNull(checks.deletedAt)).orderBy(checks.dueDate);
+  return getDb().select().from(checks).where(isNull(checks.deletedAt)).orderBy(checks.issueDate);
 }
 
 export async function createCheck(input: unknown) {
@@ -58,7 +58,6 @@ export async function createCheck(input: unknown) {
       bank: parsed.data.bank,
       amount: parsed.data.amount,
       issueDate: parsed.data.issueDate,
-      dueDate: parsed.data.dueDate,
       estimatedPaymentDate: parsed.data.estimatedPaymentDate || null,
       relatedEntity: parsed.data.relatedEntity || null,
       notes: parsed.data.notes || null,
@@ -102,7 +101,6 @@ export async function updateCheck(id: string, input: unknown) {
         bank: parsed.data.bank,
         amount: parsed.data.amount,
         issueDate: parsed.data.issueDate,
-        dueDate: parsed.data.dueDate,
         estimatedPaymentDate: parsed.data.estimatedPaymentDate || null,
         relatedEntity: parsed.data.relatedEntity || null,
         notes: parsed.data.notes || null,
@@ -152,7 +150,7 @@ export async function updateCheckStatus(id: string, status: CheckStatus) {
       .update(checks)
       .set({
         status,
-        paymentDate: status === "COBRADO" ? today : status === "PENDIENTE" ? null : undefined,
+        paymentDate: status === "COBRADO" || status === "PAGADO" ? today : status === "PENDIENTE" ? null : undefined,
       })
       .where(eq(checks.id, id));
   }

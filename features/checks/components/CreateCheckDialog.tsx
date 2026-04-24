@@ -44,7 +44,7 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
     formState: { errors, isSubmitting, isValid },
   } = useForm<CreateCheckInput>({
     resolver: zodResolver(createCheckSchema),
-    defaultValues: { issueDate: today, dueDate: today, kind: "COMUN" },
+    defaultValues: { issueDate: today, kind: "COMUN" },
     mode: "onChange",
   });
 
@@ -52,7 +52,6 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
   const kind = watch("kind");
   const type = watch("type");
   const relatedEntity = watch("relatedEntity");
-  const dueDate = watch("dueDate");
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,7 +65,7 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
     try {
       const key = await uploadFile(file, {
         directory: "cheques",
-        date: dueDate || today,
+        date: today,
       });
       setPhotoKey(key);
       setPhotoName(file.name);
@@ -95,14 +94,14 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
     const result = await createCheck({ ...data, photoUrl: photoKey });
     if ("success" in result) {
       setOpen(false);
-      reset({ issueDate: today, dueDate: today, kind: "COMUN" });
+      reset({ issueDate: today, kind: "COMUN" });
       clearPhoto(false);
       router.refresh();
     }
   };
 
   const handleClose = (o: boolean) => {
-    if (!o) { reset({ issueDate: today, dueDate: today, kind: "COMUN" }); clearPhoto(); }
+    if (!o) { reset({ issueDate: today, kind: "COMUN" }); clearPhoto(); }
     setOpen(o);
   };
 
@@ -181,18 +180,11 @@ export function CreateCheckDialog({ banks, clients, providers }: CreateCheckDial
               </div>
             </div>
 
-            {/* Fechas */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="issueDate">Fecha de Emisión <span className="text-destructive">*</span></Label>
-                <Input id="issueDate" type="date" {...register("issueDate")} />
-                {errors.issueDate && <p className="text-xs text-destructive">{errors.issueDate.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="dueDate">Fecha de Vencimiento <span className="text-destructive">*</span></Label>
-                <Input id="dueDate" type="date" {...register("dueDate")} />
-                {errors.dueDate && <p className="text-xs text-destructive">{errors.dueDate.message}</p>}
-              </div>
+            {/* Fecha de Emisión */}
+            <div className="space-y-1.5">
+              <Label htmlFor="issueDate">Fecha de Emisión <span className="text-destructive">*</span></Label>
+              <Input id="issueDate" type="date" {...register("issueDate")} />
+              {errors.issueDate && <p className="text-xs text-destructive">{errors.issueDate.message}</p>}
             </div>
 
             {/* Fecha est. de cobro/pago */}

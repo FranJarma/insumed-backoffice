@@ -348,7 +348,7 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         {/* Entrega: toggle entre marcar y revertir */}
-                        {sale.status !== "CANCELLED" && !sale.deliveredAt && (
+                        {sale.status === "PENDING_INVOICE" && !sale.deliveredAt && (
                           <Tooltip label="Marcar pedido como entregado">
                             <Button size="sm" variant="ghost"
                               className="h-7 w-7 p-0 text-green-600 hover:text-green-700"
