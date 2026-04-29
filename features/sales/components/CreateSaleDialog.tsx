@@ -34,12 +34,15 @@ type ItemDraft = {
   quantity: number; unitPrice: number; priceWithVat: number | null; subtotal: number;
 };
 
+type InvoiceType = "A" | "B" | "AE";
+
 const INVOICE_TYPES = [
   { value: "A", label: "Factura A" },
   { value: "B", label: "Factura B" },
+  { value: "AE", label: "Factura AE" },
 ] as const;
 
-function calcSubtotal(item: Omit<ItemDraft, "subtotal">, invoiceType: "A" | "B"): number {
+function calcSubtotal(item: Omit<ItemDraft, "subtotal">, invoiceType: InvoiceType): number {
   const price = invoiceType === "B" && item.priceWithVat != null ? item.priceWithVat : item.unitPrice;
   return parseFloat((item.quantity * price).toFixed(2));
 }
@@ -87,14 +90,14 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
 
   const itemsTotal = items.reduce((sum, i) => sum + i.subtotal, 0);
 
-  const recalcItems = (newInvoiceType: "A" | "B", currentItems: ItemDraft[]) => {
+  const recalcItems = (newInvoiceType: InvoiceType, currentItems: ItemDraft[]) => {
     return currentItems.map((item) => ({
       ...item,
       subtotal: calcSubtotal(item, newInvoiceType),
     }));
   };
 
-  const handleInvoiceTypeChange = (type: "A" | "B") => {
+  const handleInvoiceTypeChange = (type: InvoiceType) => {
     setValue("invoiceType", type, { shouldValidate: true });
     const updated = recalcItems(type, items);
     setItems(updated);
@@ -229,18 +232,19 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
             </div>
 
             {/* Tipo + Fecha */}
-            <div className="grid grid-cols-[auto_1fr] gap-3 items-start">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Tipo <span className="text-destructive">*</span></Label>
-                <div className="flex gap-1.5">
+                <Label htmlFor="invoiceType">Tipo <span className="text-destructive">*</span></Label>
+                <select
+                  id="invoiceType"
+                  value={invoiceType}
+                  onChange={(e) => handleInvoiceTypeChange(e.target.value as InvoiceType)}
+                  className="h-9 w-full rounded-md border bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
                   {INVOICE_TYPES.map((t) => (
-                    <button key={t.value} type="button"
-                      onClick={() => handleInvoiceTypeChange(t.value)}
-                      className={`w-10 rounded-md border py-1.5 text-sm font-semibold transition-colors ${
-                        invoiceType === t.value ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-muted"
-                      }`}>{t.value}</button>
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
-                </div>
+                </select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="date">Fecha</Label>
@@ -273,7 +277,7 @@ export function CreateSaleDialog({ clients, patients, supplies, categories }: Cr
                 <p className="text-xs text-muted-foreground">
                   {invoiceType === "B"
                     ? "Factura B: se usa el precio con IVA para calcular los subtotales."
-                    : "Factura A: se usa el precio unitario para calcular los subtotales."}
+                    : `${INVOICE_TYPES.find((t) => t.value === invoiceType)?.label}: se usa el precio unitario para calcular los subtotales.`}
                 </p>
               </div>
               <div className="space-y-2">

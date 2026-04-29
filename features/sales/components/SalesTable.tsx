@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { XCircle, ChevronLeft, ChevronRight, CircleDollarSign, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, Receipt, PackageCheck, RotateCcw } from "lucide-react";
+import { XCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, ArrowDownUp, ArrowRightLeft } from "lucide-react";
 
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -12,10 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CancelSaleDialog } from "./CancelSaleDialog";
+import { ChangeSaleStatusDialog } from "./ChangeSaleStatusDialog";
 import { EditSaleDialog } from "./EditSaleDialog";
-import { InvoiceSaleDialog } from "./InvoiceSaleDialog";
-import { MarkSaleAsPaidDialog } from "./MarkSaleAsPaidDialog";
-import { deleteSale, markSaleAsDelivered, revertSaleDelivery } from "../actions";
+import { deleteSale } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadSalesExcel, downloadSalesPdf } from "@/lib/download";
 import { fileUrl } from "@/lib/upload";
@@ -29,7 +28,7 @@ type SaleRow = {
   id: string;
   clientId: string;
   clientName: string | null;
-  invoiceType: "A" | "B";
+  invoiceType: "A" | "B" | "AE";
   invoiceNumber: string | null;
   invoiceDate: string | null;
   date: string;
@@ -50,6 +49,8 @@ type SaleRow = {
 type ClientOption = { id: string; name: string; cuit: string };
 
 type CategoryOption = { id: string; name: string };
+type InvoiceTypeFilter = "all" | "A" | "B" | "AE";
+type InvoiceSortDirection = "asc" | "desc" | null;
 
 interface SalesTableProps {
   sales: SaleRow[];
@@ -78,8 +79,6 @@ const STATUS_VARIANT: Record<SaleStatus, "pending_invoice" | "invoiced" | "paid"
 };
 
 const isPaidStatus = (status: SaleStatus) => status === "PAID" || status === "INVOICED_PAID";
-const isInvoicedStatus = (status: SaleStatus) =>
-  status === "INVOICED" || status === "INVOICED_PAID" || status === "PENDING";
 
 function currentYear() { return new Date().getFullYear(); }
 function currentMonthKey() {
@@ -89,18 +88,31 @@ function currentMonthKey() {
 
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
+const INVOICE_TYPE_LABELS: Record<Exclude<InvoiceTypeFilter, "all">, string> = {
+  A: "Factura A",
+  B: "Factura B",
+  AE: "Factura AE",
+};
+
+function invoiceTypeClass(invoiceType: SaleRow["invoiceType"]) {
+  if (invoiceType === "A") return "bg-blue-100 text-blue-700";
+  if (invoiceType === "B") return "bg-purple-100 text-purple-700";
+  return "bg-emerald-100 text-emerald-700";
+}
+
 export function SalesTable({ sales, clients, patients, supplies, categories }: SalesTableProps) {
   const router = useRouter();
   const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
-  const [invoiceSaleId, setInvoiceSaleId] = useState<string | null>(null);
-  const [paySaleId, setPaySaleId] = useState<string | null>(null);
+  const [changeStatusSale, setChangeStatusSale] = useState<SaleRow | null>(null);
   const [editSale, setEditSale] = useState<SaleRow | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isFullYear, setIsFullYear] = useState(false);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [selectedClient, setSelectedClient] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState<"all" | "PENDING_INVOICE" | "INVOICED" | "PAID" | "INVOICED_PAID" | "CANCELLED">("all");
-  const [selectedInvoiceType, setSelectedInvoiceType] = useState<"all" | "A" | "B">("all");
+  const [selectedInvoiceType, setSelectedInvoiceType] = useState<InvoiceTypeFilter>("all");
+  const [invoiceSortDirection, setInvoiceSortDirection] = useState<InvoiceSortDirection>(null);
 
   const effectiveMonth = `${selectedYear}-${selectedMonth.slice(5)}`;
 
@@ -112,7 +124,7 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
   const filtered = useMemo(
     () =>
       sales.filter((s) => {
-        const matchMonth = s.date.startsWith(effectiveMonth);
+        const matchPeriod = isFullYear ? s.date.startsWith(`${selectedYear}-`) : s.date.startsWith(effectiveMonth);
         const matchClient = selectedClient === "all" || s.clientName === selectedClient;
         const matchStatus =
           selectedStatus === "all" ||
@@ -124,15 +136,31 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
             ? s.status === "INVOICED_PAID"
             : s.status === selectedStatus);
         const matchInvoiceType = selectedInvoiceType === "all" || s.invoiceType === selectedInvoiceType;
-        return matchMonth && matchClient && matchStatus && matchInvoiceType;
+        return matchPeriod && matchClient && matchStatus && matchInvoiceType;
       }),
-    [sales, effectiveMonth, selectedClient, selectedStatus, selectedInvoiceType]
+    [sales, isFullYear, selectedYear, effectiveMonth, selectedClient, selectedStatus, selectedInvoiceType]
   );
+
+  const displayedSales = useMemo(() => {
+    if (!invoiceSortDirection) return filtered;
+
+    return [...filtered].sort((a, b) => {
+      const aValue = a.invoiceNumber?.trim();
+      const bValue = b.invoiceNumber?.trim();
+
+      if (!aValue && !bValue) return 0;
+      if (!aValue) return 1;
+      if (!bValue) return -1;
+
+      const result = aValue.localeCompare(bValue, "es-AR", { numeric: true, sensitivity: "base" });
+      return invoiceSortDirection === "asc" ? result : -result;
+    });
+  }, [filtered, invoiceSortDirection]);
 
   const totalInvoiced = useMemo(
     () =>
       filtered
-        .filter((s) => isInvoicedStatus(s.status))
+        .filter((s) => s.status === "INVOICED" || s.status === "PENDING")
         .reduce((sum, s) => sum + parseFloat(s.amount), 0),
     [filtered]
   );
@@ -140,6 +168,20 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
     () =>
       filtered
         .filter((s) => s.status === "PENDING_INVOICE")
+        .reduce((sum, s) => sum + parseFloat(s.amount), 0),
+    [filtered]
+  );
+  const totalPaid = useMemo(
+    () =>
+      filtered
+        .filter((s) => s.status === "PAID")
+        .reduce((sum, s) => sum + parseFloat(s.amount), 0),
+    [filtered]
+  );
+  const totalInvoicedPaid = useMemo(
+    () =>
+      filtered
+        .filter((s) => s.status === "INVOICED_PAID")
         .reduce((sum, s) => sum + parseFloat(s.amount), 0),
     [filtered]
   );
@@ -157,7 +199,11 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
     setSelectedYear(parseInt(newMonth.slice(0, 4)));
   };
 
-  const periodLabel = monthLabel(effectiveMonth);
+  const handleInvoiceSort = () => {
+    setInvoiceSortDirection((current) => (current === "asc" ? "desc" : current === "desc" ? null : "asc"));
+  };
+
+  const periodLabel = isFullYear ? `Año ${selectedYear}` : monthLabel(effectiveMonth);
   const clientLabel = selectedClient === "all" ? "todos" : selectedClient.toLowerCase().replace(/\s+/g, "-");
 
   // Whether a sale can be invoiced (pending invoice) or edited/cancelled (editable states)
@@ -170,7 +216,6 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
     <>
       {/* Barra de filtros */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Año */}
         <select
           value={selectedYear}
           onChange={(e) => {
@@ -182,19 +227,30 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         >
           {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
+        <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={isFullYear}
+            onChange={(e) => setIsFullYear(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 accent-primary"
+          />
+          Año completo
+        </label>
 
         {/* Mes */}
-        <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
-          <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="min-w-[110px] text-center text-sm font-medium">
-            {monthLabel(effectiveMonth)}
-          </span>
-          <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+        {!isFullYear && (
+          <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
+            <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted" type="button">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="min-w-[110px] text-center text-sm font-medium">
+              {monthLabel(effectiveMonth)}
+            </span>
+            <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted" type="button">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Cliente */}
         <select
@@ -209,12 +265,13 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         {/* Tipo de factura */}
         <select
           value={selectedInvoiceType}
-          onChange={(e) => setSelectedInvoiceType(e.target.value as "all" | "A" | "B")}
+          onChange={(e) => setSelectedInvoiceType(e.target.value as InvoiceTypeFilter)}
           className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="all">Todos los tipos</option>
           <option value="A">Factura A</option>
           <option value="B">Factura B</option>
+          <option value="AE">Factura AE</option>
         </select>
 
         {/* Estado */}
@@ -232,17 +289,17 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         </select>
 
         <span className="text-xs text-muted-foreground">
-          {filtered.filter(s => s.status !== "CANCELLED").length} ventas
+          {filtered.length} ventas
         </span>
 
         {/* Descargas */}
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
-            onClick={() => downloadSalesExcel(filtered, periodLabel, clientLabel)}>
+            onClick={() => downloadSalesExcel(displayedSales, periodLabel, clientLabel)}>
             <FileSpreadsheet className="h-3.5 w-3.5" />Excel
           </Button>
           <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
-            onClick={() => downloadSalesPdf(filtered, periodLabel, clientLabel)}>
+            onClick={() => downloadSalesPdf(displayedSales, periodLabel, clientLabel)}>
             <FileText className="h-3.5 w-3.5" />PDF
           </Button>
         </div>
@@ -250,24 +307,34 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
 
       {filtered.length === 0 ? (
         <div className="flex h-32 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-          No hay ventas para el período seleccionado.
+          No hay ventas para el periodo seleccionado.
         </div>
       ) : (
         <div className="space-y-4">
           {/* Resumen de totales */}
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border bg-card px-4 py-3">
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">Facturadas</span>
-                <span className="text-sm font-semibold text-blue-700">{formatCurrency(totalInvoiced)}</span>
+            {selectedStatus === "all" && (
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Facturadas</span>
+                  <span className="text-sm font-semibold text-blue-700">{formatCurrency(totalInvoiced)}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Pend. de Facturar</span>
+                  <span className="text-sm font-semibold text-orange-700">{formatCurrency(totalPendingInvoice)}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Pagadas</span>
+                  <span className="text-sm font-semibold text-green-700">{formatCurrency(totalPaid)}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Pagadas y Facturadas</span>
+                  <span className="text-sm font-semibold text-emerald-700">{formatCurrency(totalInvoicedPaid)}</span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">Pend. de Facturar</span>
-                <span className="text-sm font-semibold text-orange-700">{formatCurrency(totalPendingInvoice)}</span>
-              </div>
-            </div>
+            )}
             <div className="flex flex-col items-end">
-              <span className="text-xs text-muted-foreground">Total del mes</span>
+              <span className="text-xs text-muted-foreground">Total del periodo</span>
               <span className="text-base font-bold">{formatCurrency(total)}</span>
             </div>
           </div>
@@ -278,7 +345,17 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                 <TableRow>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Nº Factura</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={handleInvoiceSort}
+                      className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-left hover:bg-muted"
+                      title="Ordenar por numero de factura"
+                    >
+                      Nro Factura
+                      <ArrowDownUp className={`h-3.5 w-3.5 ${invoiceSortDirection ? "text-primary" : "text-muted-foreground"}`} />
+                    </button>
+                  </TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Paciente</TableHead>
                   <TableHead>OC</TableHead>
@@ -288,13 +365,14 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((sale) => (
+                {displayedSales.map((sale) => (
                   <TableRow key={sale.id}>
                     <TableCell className="font-medium">{sale.clientName ?? "—"}</TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        sale.invoiceType === "A" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
-                      }`}>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${invoiceTypeClass(sale.invoiceType)}`}
+                        title={INVOICE_TYPE_LABELS[sale.invoiceType]}
+                      >
                         {sale.invoiceType}
                       </span>
                     </TableCell>
@@ -346,9 +424,6 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                             Pagada: {formatDate(sale.paymentDate)}
                           </span>
                         )}
-                        {sale.deliveredAt && (
-                          <Badge variant="delivered">Entregado</Badge>
-                        )}
                         {sale.status === "CANCELLED" && sale.creditNoteNumber && (
                           <div className="flex flex-col gap-1">
                             <span className="font-mono text-xs text-muted-foreground">{sale.creditNoteNumber}</span>
@@ -370,7 +445,7 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                                 className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
                               >
                                 <ImageIcon className="h-3 w-3" />
-                                Nota de crÃ©dito
+                                Nota de crédito
                               </a>
                             )}
                           </div>
@@ -379,41 +454,12 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {/* Entrega: toggle entre marcar y revertir */}
-                        {sale.status === "PENDING_INVOICE" && !sale.deliveredAt && (
-                          <Tooltip label="Marcar pedido como entregado">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-green-600 hover:text-green-700"
-                              onClick={async () => { await markSaleAsDelivered(sale.id); router.refresh(); }}>
-                              <PackageCheck className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                        )}
-                        {sale.deliveredAt && (
-                          <Tooltip label="Revertir entrega">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700"
-                              onClick={async () => { await revertSaleDelivery(sale.id); router.refresh(); }}>
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                        )}
-                        {/* Pendiente de Facturar: botón Facturar */}
-                        {!isPaidStatus(sale.status) && sale.status !== "CANCELLED" && (
-                          <Tooltip label="Marcar como pagada">
-                            <Button size="sm" variant="ghost"
-                              className="h-7 w-7 p-0 text-green-700 hover:text-green-800"
-                              onClick={() => setPaySaleId(sale.id)}>
-                              <CircleDollarSign className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                        )}
-                        {(sale.status === "PENDING_INVOICE" || sale.status === "PAID") && (
-                          <Tooltip label="Facturar">
+                        {sale.status !== "CANCELLED" && (
+                          <Tooltip label="Cambiar estado">
                             <Button size="sm" variant="ghost"
                               className="h-7 w-7 p-0 text-primary hover:text-primary"
-                              onClick={() => setInvoiceSaleId(sale.id)}>
-                              <Receipt className="h-3.5 w-3.5" />
+                              onClick={() => setChangeStatusSale(sale)}>
+                              <ArrowRightLeft className="h-3.5 w-3.5" />
                             </Button>
                           </Tooltip>
                         )}
@@ -455,18 +501,11 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         </div>
       )}
 
-      <InvoiceSaleDialog
-        saleId={invoiceSaleId}
-        open={invoiceSaleId !== null}
-        onOpenChange={(open) => !open && setInvoiceSaleId(null)}
-        onSuccess={() => { setInvoiceSaleId(null); router.refresh(); }}
-      />
-
-      <MarkSaleAsPaidDialog
-        saleId={paySaleId}
-        open={paySaleId !== null}
-        onOpenChange={(open) => !open && setPaySaleId(null)}
-        onSuccess={() => { setPaySaleId(null); router.refresh(); }}
+      <ChangeSaleStatusDialog
+        sale={changeStatusSale}
+        open={changeStatusSale !== null}
+        onOpenChange={(open) => !open && setChangeStatusSale(null)}
+        onSuccess={() => { setChangeStatusSale(null); router.refresh(); }}
       />
 
       <CancelSaleDialog

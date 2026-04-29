@@ -15,7 +15,7 @@ import {
 export const userRole = pgEnum("user_role", ["jefe", "operario", "admin"]);
 export const supplyStatus = pgEnum("supply_status", ["en_deposito", "en_entrega", "entregado"]);
 export const saleStatus = pgEnum("sale_status", ["PENDING_INVOICE", "PENDING", "INVOICED", "PAID", "INVOICED_PAID", "CANCELLED"]);
-export const invoiceType = pgEnum("invoice_type", ["A", "B"]);
+export const invoiceType = pgEnum("invoice_type", ["A", "B", "AE"]);
 export const purchaseStatus = pgEnum("purchase_status", ["PENDING", "PAID"]);
 export const purchaseCategory = pgEnum("purchase_category", ["PROVEEDOR", "VARIOS"]);
 export const checkType = pgEnum("check_type", ["EMITIDO", "RECIBIDO"]);

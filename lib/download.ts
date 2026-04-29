@@ -33,7 +33,7 @@ type PurchaseRow = {
 
 type SaleRow = {
   clientName: string | null;
-  invoiceType: "A" | "B";
+  invoiceType: "A" | "B" | "AE";
   invoiceNumber: string | null;
   date: string;
   oc: string | null;

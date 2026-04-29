@@ -41,7 +41,7 @@ export type MockProvider = {
 export type MockSale = {
   id: string;
   clientId: string;
-  invoiceType: "A" | "B";
+  invoiceType: "A" | "B" | "AE";
   invoiceNumber: string | null;
   invoiceDate: string | null;
   date: string;
@@ -470,7 +470,7 @@ export function mockGetSaleItems(saleId: string): MockSaleItem[] {
 export function mockCreateSale(
   data: {
     clientId: string;
-    invoiceType?: "A" | "B";
+    invoiceType?: "A" | "B" | "AE";
     invoiceNumber?: string;
     invoiceDate?: string;
     date: string;
@@ -535,7 +535,7 @@ export function mockCreateSale(
 }
 export function mockUpdateSale(
   id: string,
-  data: { clientId: string; invoiceType: "A" | "B"; invoiceNumber?: string; invoiceDate?: string; date: string; oc?: string; patient?: string; amount: string; documentUrl?: string; isInvoiced?: boolean; isPaid?: boolean; paymentDate?: string; },
+  data: { clientId: string; invoiceType: "A" | "B" | "AE"; invoiceNumber?: string; invoiceDate?: string; date: string; oc?: string; patient?: string; amount: string; documentUrl?: string; isInvoiced?: boolean; isPaid?: boolean; paymentDate?: string; },
   items: Array<{ supplyId: string; pm: string; supplyName: string; quantity: string; unitPrice: string; priceWithVat?: string; subtotal: string; }> = []
 ) {
   const s = store.sales.find((s) => s.id === id);
@@ -594,6 +594,7 @@ export function mockMarkSaleAsInvoiced(id: string, data: { invoiceNumber: string
     if (data.documentUrl) s.documentUrl = data.documentUrl;
   }
 }
+
 export function mockSoftDeleteSale(id: string) {
   const saleItems = store.saleItems.filter((i) => i.saleId === id);
   for (const item of saleItems) {
@@ -611,6 +612,27 @@ export function mockMarkSaleAsPaid(id: string, data: { paymentDate: string }) {
     s.status = s.status === "INVOICED" || s.status === "PENDING" ? "INVOICED_PAID" : "PAID";
     s.paymentDate = data.paymentDate;
   }
+}
+
+export function mockChangeSaleStatus(
+  id: string,
+  data: {
+    targetStatus: "PENDING_INVOICE" | "PAID" | "INVOICED" | "INVOICED_PAID";
+    invoiceNumber?: string;
+    invoiceDate?: string;
+    paymentDate?: string;
+  }
+) {
+  const s = store.sales.find((s) => s.id === id);
+  if (!s || s.status === "CANCELLED") return;
+
+  Object.assign(s, {
+    status: data.targetStatus,
+    invoiceNumber: data.targetStatus === "INVOICED" || data.targetStatus === "INVOICED_PAID" ? data.invoiceNumber || null : null,
+    invoiceDate: data.targetStatus === "INVOICED" || data.targetStatus === "INVOICED_PAID" ? data.invoiceDate || null : null,
+    paymentDate: data.targetStatus === "PAID" || data.targetStatus === "INVOICED_PAID" ? data.paymentDate || null : null,
+    documentUrl: data.targetStatus === "INVOICED" || data.targetStatus === "INVOICED_PAID" ? s.documentUrl : null,
+  });
 }
 
 export function mockCancelSale(id: string, data: { creditNoteNumber: string; creditNoteAmount: string; cancellationDate: string; creditNoteUrl?: string }) {

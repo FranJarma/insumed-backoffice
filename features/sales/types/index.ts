@@ -5,7 +5,7 @@ import { optionalUploadKeySchema } from "@/lib/upload-validation";
 export const createSaleSchema = z
   .object({
     clientId: z.string().min(1, "Seleccione un cliente valido"),
-    invoiceType: z.enum(["A", "B"]).default("A"),
+    invoiceType: z.enum(["A", "B", "AE"]).default("A"),
     invoiceNumber: z.string().optional(),
     invoiceDate: z.string().optional(),
     date: z.string().min(1, "La fecha es requerida"),
@@ -43,6 +43,26 @@ export const markSaleAsPaidSchema = z.object({
   paymentDate: z.string().trim().min(1, "La fecha de pago es requerida"),
 });
 
+export const changeSaleStatusSchema = z
+  .object({
+    targetStatus: z.enum(["PENDING_INVOICE", "PAID", "INVOICED", "INVOICED_PAID"]),
+    invoiceNumber: z.string().optional(),
+    invoiceDate: z.string().optional(),
+    paymentDate: z.string().optional(),
+  })
+  .refine((data) => !["INVOICED", "INVOICED_PAID"].includes(data.targetStatus) || !!data.invoiceNumber?.trim(), {
+    message: "El numero de factura es requerido",
+    path: ["invoiceNumber"],
+  })
+  .refine((data) => !["INVOICED", "INVOICED_PAID"].includes(data.targetStatus) || !!data.invoiceDate?.trim(), {
+    message: "La fecha de facturacion es requerida",
+    path: ["invoiceDate"],
+  })
+  .refine((data) => !["PAID", "INVOICED_PAID"].includes(data.targetStatus) || !!data.paymentDate?.trim(), {
+    message: "La fecha de pago es requerida",
+    path: ["paymentDate"],
+  });
+
 export const cancelSaleSchema = z.object({
   creditNoteNumber: z.string().min(1, "El numero de nota de credito es requerido"),
   creditNoteAmount: z
@@ -56,6 +76,7 @@ export const cancelSaleSchema = z.object({
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;
 export type MarkSaleAsInvoicedInput = z.infer<typeof markSaleAsInvoicedSchema>;
 export type MarkSaleAsPaidInput = z.infer<typeof markSaleAsPaidSchema>;
+export type ChangeSaleStatusInput = z.infer<typeof changeSaleStatusSchema>;
 export type CancelSaleInput = z.infer<typeof cancelSaleSchema>;
 
 export type SaleWithClient = Sale & { clientName: string | null };

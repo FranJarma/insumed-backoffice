@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { desc, eq, inArray, isNull } from "drizzle-orm";
 import {
+  mockChangeSaleStatus,
   mockCancelSale,
   mockCreateSale,
   mockGetSalesWithClients,
@@ -19,6 +20,7 @@ import { authorizeAction, requirePermission } from "@/lib/auth";
 import { deleteR2Object } from "@/lib/r2";
 import {
   cancelSaleSchema,
+  changeSaleStatusSchema,
   createSaleSchema,
   markSaleAsInvoicedSchema,
   markSaleAsPaidSchema,
@@ -28,6 +30,7 @@ import {
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 const CANCELLABLE_SALE_STATUSES = ["INVOICED", "PAID", "INVOICED_PAID", "PENDING"] as const;
 const CANCEL_ONLY_INVOICED_ERROR = "Solo se pueden anular facturas de ventas facturadas.";
+type ChangeableSaleStatus = "PENDING_INVOICE" | "PAID" | "INVOICED" | "INVOICED_PAID";
 
 function canCancelSale(status: string | null | undefined) {
   return !!status && CANCELLABLE_SALE_STATUSES.includes(status as (typeof CANCELLABLE_SALE_STATUSES)[number]);
@@ -38,6 +41,14 @@ function resolveSaleStatus(isInvoiced: boolean, isPaid: boolean) {
   if (isPaid) return "PAID";
   if (isInvoiced) return "INVOICED";
   return "PENDING_INVOICE";
+}
+
+function normalizeChangeableSaleStatus(status: string | null | undefined): ChangeableSaleStatus | null {
+  if (status === "PENDING") return "INVOICED";
+  if (status === "PENDING_INVOICE" || status === "PAID" || status === "INVOICED" || status === "INVOICED_PAID") {
+    return status;
+  }
+  return null;
 }
 
 function resolveInvoiceDate(params: {
@@ -324,6 +335,68 @@ export async function markSaleAsPaid(id: string, input: unknown) {
       .update(sales)
       .set({ status, paymentDate: parsed.data.paymentDate })
       .where(eq(sales.id, id));
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function changeSaleStatus(id: string, input: unknown) {
+  const parsed = changeSaleStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const auth = await authorizeAction("sales:update");
+  if ("error" in auth) {
+    return auth;
+  }
+
+  const nextStatus = parsed.data.targetStatus as ChangeableSaleStatus;
+  const shouldKeepInvoice = nextStatus === "INVOICED" || nextStatus === "INVOICED_PAID";
+  const shouldKeepPayment = nextStatus === "PAID" || nextStatus === "INVOICED_PAID";
+
+  if (USE_MOCK) {
+    const sale = mockGetSalesWithClients().find((item) => item.id === id);
+    if (!sale) {
+      return { error: { _form: ["Venta no encontrada"] } };
+    }
+    if (sale.status === "CANCELLED") {
+      return { error: { _form: ["No se puede cambiar el estado de una venta anulada"] } };
+    }
+    if (normalizeChangeableSaleStatus(sale.status) === nextStatus) {
+      return { error: { _form: ["La venta ya tiene ese estado"] } };
+    }
+    mockChangeSaleStatus(id, parsed.data);
+  } else {
+    const existingSale = await getExistingSale(id);
+    if (!existingSale) {
+      return { error: { _form: ["Venta no encontrada"] } };
+    }
+    if (existingSale.status === "CANCELLED") {
+      return { error: { _form: ["No se puede cambiar el estado de una venta anulada"] } };
+    }
+    if (normalizeChangeableSaleStatus(existingSale.status) === nextStatus) {
+      return { error: { _form: ["La venta ya tiene ese estado"] } };
+    }
+
+    await getDb()
+      .update(sales)
+      .set({
+        status: nextStatus,
+        invoiceNumber: shouldKeepInvoice ? parsed.data.invoiceNumber?.trim() || null : null,
+        invoiceDate: shouldKeepInvoice ? parsed.data.invoiceDate || null : null,
+        paymentDate: shouldKeepPayment ? parsed.data.paymentDate || null : null,
+        documentUrl: shouldKeepInvoice ? existingSale.documentUrl : null,
+      })
+      .where(eq(sales.id, id));
+
+    if (!shouldKeepInvoice && existingSale.documentUrl) {
+      await deleteR2Object(existingSale.documentUrl).catch((error) => {
+        console.error("[sales.changeSaleStatus.deleteDocument]", error);
+      });
+    }
   }
 
   revalidatePath("/sales");

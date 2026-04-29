@@ -67,6 +67,7 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
   const [isPending, startTransition] = useTransition();
   const [editPurchase, setEditPurchase] = useState<PurchaseRow | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isFullYear, setIsFullYear] = useState(false);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [selectedProvider, setSelectedProvider] = useState("all");
@@ -82,12 +83,12 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
   const filtered = useMemo(
     () =>
       purchases.filter((p) => {
-        const matchMonth = p.date.startsWith(effectiveMonth);
+        const matchPeriod = isFullYear ? p.date.startsWith(`${selectedYear}-`) : p.date.startsWith(effectiveMonth);
         const matchProvider = selectedProvider === "all" || p.provider === selectedProvider;
         const matchStatus = selectedStatus === "all" || p.status === selectedStatus;
-        return matchMonth && matchProvider && matchStatus;
+        return matchPeriod && matchProvider && matchStatus;
       }),
-    [purchases, effectiveMonth, selectedProvider, selectedStatus]
+    [purchases, isFullYear, selectedYear, effectiveMonth, selectedProvider, selectedStatus]
   );
 
   const totalPaid = useMemo(
@@ -113,7 +114,7 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
     setSelectedYear(parseInt(newMonth.slice(0, 4)));
   };
 
-  const periodLabel = monthLabel(effectiveMonth);
+  const periodLabel = isFullYear ? `Año ${selectedYear}` : monthLabel(effectiveMonth);
   const providerLabel = selectedProvider === "all" ? "todos" : selectedProvider.toLowerCase().replace(/\s+/g, "-");
 
   return (
@@ -135,18 +136,30 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
           ))}
         </select>
 
+        <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={isFullYear}
+            onChange={(e) => setIsFullYear(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 accent-primary"
+          />
+          Año completo
+        </label>
+
         {/* Mes */}
-        <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
-          <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="min-w-[110px] text-center text-sm font-medium">
-            {monthLabel(effectiveMonth)}
-          </span>
-          <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+        {!isFullYear && (
+          <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
+            <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted" type="button">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="min-w-[110px] text-center text-sm font-medium">
+              {monthLabel(effectiveMonth)}
+            </span>
+            <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted" type="button">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Proveedor */}
         <select
@@ -171,7 +184,7 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
           <option value="PAID">Pagado</option>
         </select>
 
-        <span className="text-xs text-muted-foreground">{filtered.length} facturas</span>
+        <span className="text-xs text-muted-foreground">{filtered.length} compras</span>
 
         {/* Descargas */}
         <div className="ml-auto flex gap-2">
@@ -198,7 +211,7 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
 
       {filtered.length === 0 ? (
         <div className="flex h-32 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-          No hay compras para el período seleccionado.
+          No hay compras para el periodo seleccionado.
         </div>
       ) : (
         <>
@@ -215,7 +228,7 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
               </div>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-xs text-muted-foreground">Total del mes</span>
+              <span className="text-xs text-muted-foreground">Total del periodo</span>
               <span className="text-base font-bold">{formatCurrency(total)}</span>
             </div>
           </div>
