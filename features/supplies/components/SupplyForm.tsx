@@ -6,16 +6,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { createSupplySchema, SUPPLY_CATEGORIES, type CreateSupplyInput } from "../types";
+import { createSupplySchema, type CreateSupplyInput } from "../types";
+
+type CategoryOption = { id: string; name: string };
 
 interface SupplyFormProps {
   defaultValues?: Partial<CreateSupplyInput>;
   onSubmit: (data: CreateSupplyInput) => Promise<void>;
   onCancel: () => void;
   submitLabel: string;
+  categories: CategoryOption[];
 }
 
-export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel }: SupplyFormProps) {
+export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel, categories }: SupplyFormProps) {
   const {
     register,
     handleSubmit,
@@ -24,7 +27,7 @@ export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel }: S
     formState: { errors, isSubmitting, isValid },
   } = useForm<CreateSupplyInput>({
     resolver: zodResolver(createSupplySchema),
-    values: defaultValues as CreateSupplyInput | undefined,
+    values: { stock: "0", ...defaultValues } as CreateSupplyInput,
     mode: "onChange",
   });
 
@@ -112,28 +115,43 @@ export function SupplyForm({ defaultValues, onSubmit, onCancel, submitLabel }: S
             {...register("category")}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">Seleccionar...</option>
-            {SUPPLY_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            <option value="">{categories.length > 0 ? "Seleccionar..." : "No hay categorias cargadas"}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}
               </option>
             ))}
           </select>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="stock">
+            Stock <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="stock"
+            type="number"
+            step="1"
+            min="0"
+            {...register("stock")}
+            placeholder="0"
+          />
+          {errors.stock && <p className="text-xs text-destructive">{errors.stock.message}</p>}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="lotNumber">
             Nº de Lote <span className="text-muted-foreground text-xs">(opcional)</span>
           </Label>
           <Input id="lotNumber" {...register("lotNumber")} placeholder="L2024-001" />
         </div>
-      </div>
-
-      {/* Fecha de Vencimiento */}
-      <div className="space-y-1.5">
-        <Label htmlFor="expiryDate">
-          Fecha de Vencimiento <span className="text-muted-foreground text-xs">(opcional)</span>
-        </Label>
-        <Input id="expiryDate" type="date" {...register("expiryDate")} />
+        <div className="space-y-1.5">
+          <Label htmlFor="expiryDate">
+            Fecha de Vencimiento <span className="text-muted-foreground text-xs">(opcional)</span>
+          </Label>
+          <Input id="expiryDate" type="date" {...register("expiryDate")} />
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

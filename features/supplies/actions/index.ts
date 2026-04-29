@@ -44,6 +44,7 @@ export async function createSupply(input: unknown) {
       unitPrice: parsed.data.unitPrice,
       priceWithVat: parsed.data.priceWithVat || null,
       category: parsed.data.category || null,
+      stock: Number(parsed.data.stock),
       lotNumber: parsed.data.lotNumber || null,
       expiryDate: parsed.data.expiryDate || null,
     });
@@ -73,6 +74,7 @@ export async function updateSupply(id: string, input: unknown) {
         unitPrice: parsed.data.unitPrice,
         priceWithVat: parsed.data.priceWithVat || null,
         category: parsed.data.category || null,
+        stock: Number(parsed.data.stock),
         lotNumber: parsed.data.lotNumber || null,
         expiryDate: parsed.data.expiryDate || null,
       })

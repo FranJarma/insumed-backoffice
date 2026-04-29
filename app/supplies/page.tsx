@@ -1,11 +1,15 @@
 import { getSupplies } from "@/features/supplies/actions";
+import { getSupplyCategories } from "@/features/supply-categories/actions";
 import { SuppliesTable } from "@/features/supplies/components/SuppliesTable";
 import { CreateSupplyDialog } from "@/features/supplies/components/CreateSupplyDialog";
 import { requirePermission } from "@/lib/auth";
 
 export default async function SuppliesPage() {
   await requirePermission("supplies:read");
-  const suppliesData = await getSupplies();
+  const [suppliesData, categoriesData] = await Promise.all([
+    getSupplies(),
+    getSupplyCategories(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -16,9 +20,9 @@ export default async function SuppliesPage() {
             Catálogo de insumos médicos con precios unitarios
           </p>
         </div>
-        <CreateSupplyDialog />
+        <CreateSupplyDialog categories={categoriesData} />
       </div>
-      <SuppliesTable supplies={suppliesData} />
+      <SuppliesTable supplies={suppliesData} categories={categoriesData} />
     </div>
   );
 }

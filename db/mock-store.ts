@@ -115,6 +115,7 @@ export type MockSupply = {
   unitPrice: string;
   priceWithVat: string | null;
   category: string | null;
+  stock: number;
   lotNumber: string | null;
   expiryDate: string | null;
   status: "en_deposito" | "en_entrega" | "entregado";
@@ -278,14 +279,14 @@ function initStore(): Store {
   ];
 
   const supplies: MockSupply[] = [
-    { id: "sp1", pm: "PM-0001", name: "Catéter Venoso Central", description: "Catéter de triple lumen 7Fr x 20cm", unitPrice: "12500.00", priceWithVat: "15125.00", category: "Descartables", lotNumber: "L2024-001", expiryDate: "2026-12-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
-    { id: "sp2", pm: "PM-0002", name: "Guantes de Látex Estériles", description: "Talla M, caja x 100 pares", unitPrice: "4800.00", priceWithVat: "5808.00", category: "Descartables", lotNumber: "L2024-002", expiryDate: "2026-06-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
-    { id: "sp3", pm: "PM-0003", name: "Jeringa 10ml", description: "Con aguja 21G, estéril", unitPrice: "350.00", priceWithVat: "423.50", category: "Descartables", lotNumber: "L2024-003", expiryDate: "2027-03-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
-    { id: "sp4", pm: "PM-0004", name: "Apósito Transparente", description: "10x12cm, film de poliuretano", unitPrice: "2100.00", priceWithVat: "2541.00", category: "Curaciones", lotNumber: "L2024-004", expiryDate: "2027-01-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
-    { id: "sp5", pm: "PM-0005", name: "Sonda Nasogástrica N°16", description: "PVC flexible, radio-opaca", unitPrice: "3800.00", priceWithVat: "4598.00", category: "Instrumental", lotNumber: "L2024-005", expiryDate: "2026-09-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
-    { id: "sp6", pm: "PM-0006", name: "Suero Fisiológico 500ml", description: "ClNa 0.9% bolsa flexible", unitPrice: "1850.00", priceWithVat: "2238.50", category: "Farmacia", lotNumber: "L2024-006", expiryDate: "2026-08-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
-    { id: "sp7", pm: "PM-0007", name: "Gasas Estériles 10x10", description: "Tejido no tejido, paquete x 10", unitPrice: "620.00", priceWithVat: "750.20", category: "Curaciones", lotNumber: "L2024-007", expiryDate: null, status: "en_deposito", createdAt: new Date(), deletedAt: null },
-    { id: "sp8", pm: "PM-0008", name: "Equipo de Venoclisis", description: "Con filtro de 15 micras y cámara de goteo", unitPrice: "980.00", priceWithVat: "1185.80", category: "Descartables", lotNumber: "L2024-008", expiryDate: "2027-06-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp1", pm: "PM-0001", name: "Catéter Venoso Central", description: "Catéter de triple lumen 7Fr x 20cm", unitPrice: "12500.00", priceWithVat: "15125.00", category: "Descartables", stock: 12, lotNumber: "L2024-001", expiryDate: "2026-12-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp2", pm: "PM-0002", name: "Guantes de Látex Estériles", description: "Talla M, caja x 100 pares", unitPrice: "4800.00", priceWithVat: "5808.00", category: "Descartables", stock: 24, lotNumber: "L2024-002", expiryDate: "2026-06-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp3", pm: "PM-0003", name: "Jeringa 10ml", description: "Con aguja 21G, estéril", unitPrice: "350.00", priceWithVat: "423.50", category: "Descartables", stock: 200, lotNumber: "L2024-003", expiryDate: "2027-03-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp4", pm: "PM-0004", name: "Apósito Transparente", description: "10x12cm, film de poliuretano", unitPrice: "2100.00", priceWithVat: "2541.00", category: "Curaciones", stock: 40, lotNumber: "L2024-004", expiryDate: "2027-01-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp5", pm: "PM-0005", name: "Sonda Nasogástrica N°16", description: "PVC flexible, radio-opaca", unitPrice: "3800.00", priceWithVat: "4598.00", category: "Instrumental", stock: 18, lotNumber: "L2024-005", expiryDate: "2026-09-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp6", pm: "PM-0006", name: "Suero Fisiológico 500ml", description: "ClNa 0.9% bolsa flexible", unitPrice: "1850.00", priceWithVat: "2238.50", category: "Farmacia", stock: 60, lotNumber: "L2024-006", expiryDate: "2026-08-31", status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp7", pm: "PM-0007", name: "Gasas Estériles 10x10", description: "Tejido no tejido, paquete x 10", unitPrice: "620.00", priceWithVat: "750.20", category: "Curaciones", stock: 120, lotNumber: "L2024-007", expiryDate: null, status: "en_deposito", createdAt: new Date(), deletedAt: null },
+    { id: "sp8", pm: "PM-0008", name: "Equipo de Venoclisis", description: "Con filtro de 15 micras y cámara de goteo", unitPrice: "980.00", priceWithVat: "1185.80", category: "Descartables", stock: 75, lotNumber: "L2024-008", expiryDate: "2027-06-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
   ];
 
   return { banks, clients, providers, patients, sales, purchases, checks, supplies, saleItems: [] };
@@ -306,6 +307,7 @@ if (!global.__mockStore_v4) {
   for (const sup of global.__mockStore_v4.supplies) {
     if (!("priceWithVat" in sup)) (sup as MockSupply).priceWithVat = null;
     if (!("category" in sup)) (sup as MockSupply).category = null;
+    if (!("stock" in sup)) (sup as MockSupply).stock = 0;
     if (!("lotNumber" in sup)) (sup as MockSupply).lotNumber = null;
     if (!("status" in sup)) (sup as MockSupply).status = "en_deposito";
   }
@@ -808,7 +810,7 @@ export function mockGetSupplies(): MockSupply[] {
 }
 export function mockCreateSupply(data: {
   pm: string; name: string; description?: string;
-  unitPrice: string; priceWithVat?: string; category?: string; lotNumber?: string; expiryDate?: string;
+  unitPrice: string; priceWithVat?: string; category?: string; stock: string; lotNumber?: string; expiryDate?: string;
 }): MockSupply {
   const s: MockSupply = {
     id: crypto.randomUUID(),
@@ -818,6 +820,7 @@ export function mockCreateSupply(data: {
     unitPrice: data.unitPrice,
     priceWithVat: data.priceWithVat || null,
     category: data.category || null,
+    stock: Number(data.stock),
     lotNumber: data.lotNumber || null,
     expiryDate: data.expiryDate || null,
     status: "en_deposito",
@@ -829,7 +832,7 @@ export function mockCreateSupply(data: {
 }
 export function mockUpdateSupply(id: string, data: {
   pm: string; name: string; description?: string;
-  unitPrice: string; priceWithVat?: string; category?: string; lotNumber?: string; expiryDate?: string;
+  unitPrice: string; priceWithVat?: string; category?: string; stock: string; lotNumber?: string; expiryDate?: string;
 }) {
   const s = store.supplies.find((s) => s.id === id);
   if (s) Object.assign(s, {
@@ -839,6 +842,7 @@ export function mockUpdateSupply(id: string, data: {
     unitPrice: data.unitPrice,
     priceWithVat: data.priceWithVat || null,
     category: data.category || null,
+    stock: Number(data.stock),
     lotNumber: data.lotNumber || null,
     expiryDate: data.expiryDate || null,
   });

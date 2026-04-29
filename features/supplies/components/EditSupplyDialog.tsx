@@ -12,12 +12,15 @@ import { SupplyForm } from "./SupplyForm";
 import type { MockSupply } from "@/db/mock-store";
 import type { CreateSupplyInput } from "../types";
 
+type CategoryOption = { id: string; name: string };
+
 interface EditSupplyDialogProps {
   supply: MockSupply | null;
+  categories: CategoryOption[];
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditSupplyDialog({ supply, onOpenChange }: EditSupplyDialogProps) {
+export function EditSupplyDialog({ supply, categories, onOpenChange }: EditSupplyDialogProps) {
   const router = useRouter();
 
   const onSubmit = async (data: CreateSupplyInput) => {
@@ -36,6 +39,7 @@ export function EditSupplyDialog({ supply, onOpenChange }: EditSupplyDialogProps
           <DialogTitle>Editar Insumo</DialogTitle>
         </DialogHeader>
         <SupplyForm
+          categories={categories}
           defaultValues={
             supply
               ? {
@@ -45,6 +49,7 @@ export function EditSupplyDialog({ supply, onOpenChange }: EditSupplyDialogProps
                   unitPrice: supply.unitPrice,
                   priceWithVat: supply.priceWithVat ?? "",
                   category: supply.category ?? "",
+                  stock: String(supply.stock ?? 0),
                   lotNumber: supply.lotNumber ?? "",
                   expiryDate: supply.expiryDate ?? "",
                 }

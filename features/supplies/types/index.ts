@@ -28,6 +28,10 @@ export const createSupplySchema = z.object({
     .optional()
     .refine((v) => !v || (!isNaN(parseFloat(v)) && parseFloat(v) >= 0), "Precio con IVA inválido"),
   category: z.string().optional(),
+  stock: z
+    .string()
+    .min(1, "El stock es requerido")
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 0, "Stock inválido"),
   lotNumber: z.string().optional(),
   expiryDate: z.string().optional(),
 });

@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   date,
+  integer,
   numeric,
   pgEnum,
   pgTable,
@@ -129,6 +130,7 @@ export const supplies = pgTable("supplies", {
   unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
   priceWithVat: numeric("price_with_vat", { precision: 12, scale: 2 }),
   category: text("category"),
+  stock: integer("stock").default(0).notNull(),
   lotNumber: text("lot_number"),
   expiryDate: date("expiry_date"),
   status: supplyStatus("status").default("en_deposito").notNull(),

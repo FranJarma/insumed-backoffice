@@ -15,7 +15,13 @@ import { createSupply } from "../actions";
 import { SupplyForm } from "./SupplyForm";
 import type { CreateSupplyInput } from "../types";
 
-export function CreateSupplyDialog() {
+type CategoryOption = { id: string; name: string };
+
+interface CreateSupplyDialogProps {
+  categories: CategoryOption[];
+}
+
+export function CreateSupplyDialog({ categories }: CreateSupplyDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -40,6 +46,7 @@ export function CreateSupplyDialog() {
           <DialogTitle>Registrar Insumo</DialogTitle>
         </DialogHeader>
         <SupplyForm
+          categories={categories}
           onSubmit={onSubmit}
           onCancel={() => setOpen(false)}
           submitLabel="Guardar Insumo"

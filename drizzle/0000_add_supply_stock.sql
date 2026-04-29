@@ -1,0 +1,1 @@
+ALTER TABLE "supplies" ADD COLUMN IF NOT EXISTS "stock" integer DEFAULT 0 NOT NULL;
