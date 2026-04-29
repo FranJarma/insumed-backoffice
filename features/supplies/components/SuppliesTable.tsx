@@ -59,13 +59,13 @@ export function SuppliesTable({ supplies, categories }: SuppliesTableProps) {
   }, [selectedCategory, supplies]);
 
   const categoryTotals = useMemo(() => {
-    const totals: Record<string, { unitPriceTotal: number; vatPriceTotal: number; count: number }> = {};
+    const totals: Record<string, { unitPriceTotal: number; vatPriceTotal: number }> = {};
     for (const s of filteredSupplies) {
       const cat = s.category || "Sin categoría";
-      if (!totals[cat]) totals[cat] = { unitPriceTotal: 0, vatPriceTotal: 0, count: 0 };
-      totals[cat].unitPriceTotal += parseFloat(s.unitPrice);
-      totals[cat].vatPriceTotal += s.priceWithVat ? parseFloat(s.priceWithVat) : 0;
-      totals[cat].count += 1;
+      const stock = s.stock ?? 0;
+      if (!totals[cat]) totals[cat] = { unitPriceTotal: 0, vatPriceTotal: 0 };
+      totals[cat].unitPriceTotal += parseFloat(s.unitPrice) * stock;
+      totals[cat].vatPriceTotal += s.priceWithVat ? parseFloat(s.priceWithVat) * stock : 0;
     }
     return Object.entries(totals).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredSupplies]);
@@ -208,7 +208,6 @@ export function SuppliesTable({ supplies, categories }: SuppliesTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Categoría</TableHead>
-              <TableHead className="text-right w-20">Insumos</TableHead>
               <TableHead className="text-right">Total Precio Unit.</TableHead>
               <TableHead className="text-right">Total Precio c/IVA</TableHead>
             </TableRow>
@@ -217,7 +216,6 @@ export function SuppliesTable({ supplies, categories }: SuppliesTableProps) {
             {categoryTotals.map(([cat, totals]) => (
               <TableRow key={cat}>
                 <TableCell className="font-medium">{cat}</TableCell>
-                <TableCell className="text-right text-muted-foreground">{totals.count}</TableCell>
                 <TableCell className="text-right font-medium">{formatCurrency(totals.unitPriceTotal)}</TableCell>
                 <TableCell className="text-right font-medium">
                   {totals.vatPriceTotal > 0 ? formatCurrency(totals.vatPriceTotal) : <span className="text-muted-foreground">—</span>}
