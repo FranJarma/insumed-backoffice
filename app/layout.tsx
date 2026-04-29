@@ -23,7 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={inter.className}>
         <Providers>
           {session && <Nav user={session} />}
-          <main className={session ? "ml-56 min-h-screen bg-muted/20 p-8" : "min-h-screen"}>
+          <main className={session ? "ml-16 min-h-screen bg-muted/20 p-6 2xl:ml-56 2xl:p-8" : "min-h-screen"}>
             {children}
           </main>
         </Providers>
