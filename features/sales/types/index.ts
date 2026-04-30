@@ -43,25 +43,17 @@ export const markSaleAsPaidSchema = z.object({
   paymentDate: z.string().trim().min(1, "La fecha de pago es requerida"),
 });
 
-export const changeSaleStatusSchema = z
-  .object({
-    targetStatus: z.enum(["PENDING_INVOICE", "PAID", "INVOICED", "INVOICED_PAID"]),
-    invoiceNumber: z.string().optional(),
-    invoiceDate: z.string().optional(),
-    paymentDate: z.string().optional(),
-  })
-  .refine((data) => !["INVOICED", "INVOICED_PAID"].includes(data.targetStatus) || !!data.invoiceNumber?.trim(), {
-    message: "El numero de factura es requerido",
-    path: ["invoiceNumber"],
-  })
-  .refine((data) => !["INVOICED", "INVOICED_PAID"].includes(data.targetStatus) || !!data.invoiceDate?.trim(), {
-    message: "La fecha de facturacion es requerida",
-    path: ["invoiceDate"],
-  })
-  .refine((data) => !["PAID", "INVOICED_PAID"].includes(data.targetStatus) || !!data.paymentDate?.trim(), {
-    message: "La fecha de pago es requerida",
-    path: ["paymentDate"],
-  });
+export const salePaymentSchema = z.object({
+  amount: z
+    .string()
+    .min(1, "El monto es requerido")
+    .refine((value) => !Number.isNaN(parseFloat(value)) && parseFloat(value) > 0, "El monto debe ser mayor a 0"),
+  paymentDate: z.string().trim().min(1, "La fecha de pago es requerida"),
+  paymentMethod: z.string().optional(),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
+  receiptUrl: optionalUploadKeySchema("pagos", "Comprobante de pago"),
+});
 
 export const cancelSaleSchema = z.object({
   creditNoteNumber: z.string().min(1, "El numero de nota de credito es requerido"),
@@ -76,7 +68,7 @@ export const cancelSaleSchema = z.object({
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;
 export type MarkSaleAsInvoicedInput = z.infer<typeof markSaleAsInvoicedSchema>;
 export type MarkSaleAsPaidInput = z.infer<typeof markSaleAsPaidSchema>;
-export type ChangeSaleStatusInput = z.infer<typeof changeSaleStatusSchema>;
+export type SalePaymentInput = z.infer<typeof salePaymentSchema>;
 export type CancelSaleInput = z.infer<typeof cancelSaleSchema>;
 
 export type SaleWithClient = Sale & { clientName: string | null };

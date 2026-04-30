@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { XCircle, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, ArrowDownUp, ArrowRightLeft } from "lucide-react";
+import { XCircle, ChevronLeft, ChevronRight, CircleDollarSign, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, ArrowDownUp, Receipt, RotateCcw } from "lucide-react";
 
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -12,8 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CancelSaleDialog } from "./CancelSaleDialog";
-import { ChangeSaleStatusDialog } from "./ChangeSaleStatusDialog";
 import { EditSaleDialog } from "./EditSaleDialog";
+import { InvoiceSaleDialog } from "./InvoiceSaleDialog";
+import { RevertSaleInvoiceDialog } from "./RevertSaleInvoiceDialog";
+import { SalePaymentsDialog } from "./SalePaymentsDialog";
 import { deleteSale } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadSalesExcel, downloadSalesPdf } from "@/lib/download";
@@ -37,6 +39,9 @@ type SaleRow = {
   amount: string;
   status: SaleStatus;
   paymentDate: string | null;
+  paidAmount?: string;
+  balance?: string;
+  payments?: Array<{ id: string; amount: string; paymentDate: string; paymentMethod: string | null; reference: string | null; notes: string | null }>;
   documentUrl: string | null;
   creditNoteNumber: string | null;
   creditNoteAmount: string | null;
@@ -64,7 +69,7 @@ const STATUS_LABELS: Record<SaleStatus, string> = {
   PENDING_INVOICE: "Pend. Facturar",
   PENDING: "Facturada",      // legacy
   INVOICED: "Facturada",
-  PAID: "Pagada",
+  PAID: "Pend. Facturar y Pagada",
   INVOICED_PAID: "Facturada y Pagada",
   CANCELLED: "Anulada",
 };
@@ -103,7 +108,9 @@ function invoiceTypeClass(invoiceType: SaleRow["invoiceType"]) {
 export function SalesTable({ sales, clients, patients, supplies, categories }: SalesTableProps) {
   const router = useRouter();
   const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
-  const [changeStatusSale, setChangeStatusSale] = useState<SaleRow | null>(null);
+  const [invoiceSaleId, setInvoiceSaleId] = useState<string | null>(null);
+  const [revertInvoiceSaleId, setRevertInvoiceSaleId] = useState<string | null>(null);
+  const [paymentsSale, setPaymentsSale] = useState<SaleRow | null>(null);
   const [editSale, setEditSale] = useState<SaleRow | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isFullYear, setIsFullYear] = useState(false);
@@ -164,7 +171,7 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         .reduce((sum, s) => sum + parseFloat(s.amount), 0),
     [filtered]
   );
-  const totalPendingInvoice = useMemo(
+  const totalUninvoiced = useMemo(
     () =>
       filtered
         .filter((s) => s.status === "PENDING_INVOICE")
@@ -174,8 +181,8 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
   const totalPaid = useMemo(
     () =>
       filtered
-        .filter((s) => s.status === "PAID")
-        .reduce((sum, s) => sum + parseFloat(s.amount), 0),
+        .filter((s) => s.status !== "CANCELLED")
+        .reduce((sum, s) => sum + parseFloat(s.paidAmount ?? "0"), 0),
     [filtered]
   );
   const totalInvoicedPaid = useMemo(
@@ -190,6 +197,13 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
       filtered
         .filter((s) => s.status !== "CANCELLED")
         .reduce((sum, s) => sum + parseFloat(s.amount), 0),
+    [filtered]
+  );
+  const totalBalance = useMemo(
+    () =>
+      filtered
+        .filter((s) => s.status !== "CANCELLED")
+        .reduce((sum, s) => sum + parseFloat(s.balance ?? s.amount), 0),
     [filtered]
   );
 
@@ -283,7 +297,7 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
           <option value="all">Todos los estados</option>
           <option value="PENDING_INVOICE">Pend. Facturar</option>
           <option value="INVOICED">Facturadas</option>
-          <option value="PAID">Pagadas</option>
+          <option value="PAID">Pend. Facturar y Pagadas</option>
           <option value="INVOICED_PAID">Fact. y Pagadas</option>
           <option value="CANCELLED">Anuladas</option>
         </select>
@@ -320,19 +334,25 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                   <span className="text-sm font-semibold text-blue-700">{formatCurrency(totalInvoiced)}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Pend. de Facturar</span>
-                  <span className="text-sm font-semibold text-orange-700">{formatCurrency(totalPendingInvoice)}</span>
+                  <span className="text-xs text-muted-foreground">Pend. Facturar</span>
+                  <span className="text-sm font-semibold text-orange-700">{formatCurrency(totalUninvoiced)}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Pagadas</span>
-                  <span className="text-sm font-semibold text-green-700">{formatCurrency(totalPaid)}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Pagadas y Facturadas</span>
+                  <span className="text-xs text-muted-foreground">Facturadas y Pagadas</span>
                   <span className="text-sm font-semibold text-emerald-700">{formatCurrency(totalInvoicedPaid)}</span>
                 </div>
               </div>
             )}
+            <div className="flex flex-wrap items-center gap-6">
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground">Pagado</span>
+              <span className="text-sm font-semibold text-green-700">{formatCurrency(totalPaid)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground">Saldo</span>
+              <span className="text-sm font-semibold text-orange-700">{formatCurrency(totalBalance)}</span>
+            </div>
+            </div>
             <div className="flex flex-col items-end">
               <span className="text-xs text-muted-foreground">Total del periodo</span>
               <span className="text-base font-bold">{formatCurrency(total)}</span>
@@ -359,7 +379,7 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                   <TableHead>Fecha</TableHead>
                   <TableHead>Paciente</TableHead>
                   <TableHead>OC</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead className="text-right">Importes</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -415,7 +435,13 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                     <TableCell className="text-muted-foreground">{formatDate(sale.date)}</TableCell>
                     <TableCell className="text-muted-foreground">{sale.patient ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{sale.oc ?? "—"}</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(sale.amount)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-col gap-0.5 text-sm">
+                        <span className="font-semibold">{formatCurrency(sale.amount)}</span>
+                        <span className="text-xs text-green-700">Pagado: {formatCurrency(sale.paidAmount ?? "0")}</span>
+                        <span className="text-xs text-orange-700">Saldo: {formatCurrency(sale.balance ?? sale.amount)}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <Badge variant={STATUS_VARIANT[sale.status]}>{STATUS_LABELS[sale.status]}</Badge>
@@ -455,11 +481,29 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         {sale.status !== "CANCELLED" && (
-                          <Tooltip label="Cambiar estado">
+                          <Tooltip label="Pagos">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-green-700 hover:text-green-800"
+                              onClick={() => setPaymentsSale(sale)}>
+                              <CircleDollarSign className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {(sale.status === "PENDING_INVOICE" || sale.status === "PAID") && (
+                          <Tooltip label="Facturar">
                             <Button size="sm" variant="ghost"
                               className="h-7 w-7 p-0 text-primary hover:text-primary"
-                              onClick={() => setChangeStatusSale(sale)}>
-                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                              onClick={() => setInvoiceSaleId(sale.id)}>
+                              <Receipt className="h-3.5 w-3.5" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {(sale.status === "INVOICED" || sale.status === "INVOICED_PAID" || sale.status === "PENDING") && (
+                          <Tooltip label="Revertir factura">
+                            <Button size="sm" variant="ghost"
+                              className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700"
+                              onClick={() => setRevertInvoiceSaleId(sale.id)}>
+                              <RotateCcw className="h-3.5 w-3.5" />
                             </Button>
                           </Tooltip>
                         )}
@@ -501,11 +545,25 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
         </div>
       )}
 
-      <ChangeSaleStatusDialog
-        sale={changeStatusSale}
-        open={changeStatusSale !== null}
-        onOpenChange={(open) => !open && setChangeStatusSale(null)}
-        onSuccess={() => { setChangeStatusSale(null); router.refresh(); }}
+      <InvoiceSaleDialog
+        saleId={invoiceSaleId}
+        open={invoiceSaleId !== null}
+        onOpenChange={(open) => !open && setInvoiceSaleId(null)}
+        onSuccess={() => { setInvoiceSaleId(null); router.refresh(); }}
+      />
+
+      <RevertSaleInvoiceDialog
+        saleId={revertInvoiceSaleId}
+        open={revertInvoiceSaleId !== null}
+        onOpenChange={(open) => !open && setRevertInvoiceSaleId(null)}
+        onSuccess={() => { setRevertInvoiceSaleId(null); router.refresh(); }}
+      />
+
+      <SalePaymentsDialog
+        sale={paymentsSale}
+        open={paymentsSale !== null}
+        onOpenChange={(open) => !open && setPaymentsSale(null)}
+        onSuccess={() => router.refresh()}
       />
 
       <CancelSaleDialog

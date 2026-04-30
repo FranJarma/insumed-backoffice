@@ -151,6 +151,19 @@ export const saleItems = pgTable("sale_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const salePayments = pgTable("sale_payments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  saleId: uuid("sale_id").references(() => sales.id).notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  paymentDate: date("payment_date").notNull(),
+  paymentMethod: text("payment_method"),
+  reference: text("reference"),
+  notes: text("notes"),
+  receiptUrl: text("receipt_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
+
 export const checks = pgTable("checks", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: checkType("type").notNull(),
@@ -191,11 +204,16 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
     references: [clients.id],
   }),
   items: many(saleItems),
+  payments: many(salePayments),
 }));
 
 export const saleItemsRelations = relations(saleItems, ({ one }) => ({
   sale: one(sales, { fields: [saleItems.saleId], references: [sales.id] }),
   supply: one(supplies, { fields: [saleItems.supplyId], references: [supplies.id] }),
+}));
+
+export const salePaymentsRelations = relations(salePayments, ({ one }) => ({
+  sale: one(sales, { fields: [salePayments.saleId], references: [sales.id] }),
 }));
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -220,5 +238,7 @@ export type Supply = typeof supplies.$inferSelect;
 export type NewSupply = typeof supplies.$inferInsert;
 export type SaleItem = typeof saleItems.$inferSelect;
 export type NewSaleItem = typeof saleItems.$inferInsert;
+export type SalePayment = typeof salePayments.$inferSelect;
+export type NewSalePayment = typeof salePayments.$inferInsert;
 export type SupplyCategory = typeof supplyCategories.$inferSelect;
 export type NewSupplyCategory = typeof supplyCategories.$inferInsert;

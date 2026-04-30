@@ -1,36 +1,37 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import {
-  mockChangeSaleStatus,
   mockCancelSale,
+  mockCreateSalePayment,
   mockCreateSale,
+  mockDeleteSalePayment,
   mockGetSalesWithClients,
   mockMarkSaleAsDelivered,
   mockMarkSaleAsInvoiced,
   mockMarkSaleAsPaid,
+  mockRevertSaleInvoice,
   mockRevertSaleDelivery,
   mockSoftDeleteSale,
   mockUpdateSale,
 } from "@/db/mock-store";
 import { getDb } from "@/db";
-import { clients, saleItems, sales, supplies } from "@/db/schema";
+import { clients, saleItems, salePayments, sales, supplies } from "@/db/schema";
 import { authorizeAction, requirePermission } from "@/lib/auth";
 import { deleteR2Object } from "@/lib/r2";
 import {
   cancelSaleSchema,
-  changeSaleStatusSchema,
   createSaleSchema,
   markSaleAsInvoicedSchema,
   markSaleAsPaidSchema,
+  salePaymentSchema,
   type SaleItemInput,
 } from "../types";
 
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 const CANCELLABLE_SALE_STATUSES = ["INVOICED", "PAID", "INVOICED_PAID", "PENDING"] as const;
 const CANCEL_ONLY_INVOICED_ERROR = "Solo se pueden anular facturas de ventas facturadas.";
-type ChangeableSaleStatus = "PENDING_INVOICE" | "PAID" | "INVOICED" | "INVOICED_PAID";
 
 function canCancelSale(status: string | null | undefined) {
   return !!status && CANCELLABLE_SALE_STATUSES.includes(status as (typeof CANCELLABLE_SALE_STATUSES)[number]);
@@ -43,12 +44,14 @@ function resolveSaleStatus(isInvoiced: boolean, isPaid: boolean) {
   return "PENDING_INVOICE";
 }
 
-function normalizeChangeableSaleStatus(status: string | null | undefined): ChangeableSaleStatus | null {
-  if (status === "PENDING") return "INVOICED";
-  if (status === "PENDING_INVOICE" || status === "PAID" || status === "INVOICED" || status === "INVOICED_PAID") {
-    return status;
-  }
-  return null;
+function getPaymentSummary(amount: string, payments: Array<{ amount: string }>) {
+  const paidAmount = payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+  const saleAmount = parseFloat(amount);
+  return {
+    paidAmount: paidAmount.toFixed(2),
+    balance: Math.max(saleAmount - paidAmount, 0).toFixed(2),
+    paymentStatus: paidAmount <= 0 ? "UNPAID" : paidAmount >= saleAmount ? "PAID" : "PARTIALLY_PAID",
+  };
 }
 
 function resolveInvoiceDate(params: {
@@ -68,6 +71,7 @@ async function getExistingSale(id: string) {
   const [sale] = await getDb()
     .select({
       status: sales.status,
+      amount: sales.amount,
       paymentDate: sales.paymentDate,
       invoiceDate: sales.invoiceDate,
       documentUrl: sales.documentUrl,
@@ -86,7 +90,7 @@ export async function getSalesWithClients() {
     return mockGetSalesWithClients();
   }
 
-  return getDb()
+  const salesList = await getDb()
     .select({
       id: sales.id,
       clientId: sales.clientId,
@@ -112,6 +116,36 @@ export async function getSalesWithClients() {
     .leftJoin(clients, eq(sales.clientId, clients.id))
     .where(isNull(sales.deletedAt))
     .orderBy(desc(sales.date));
+
+  const saleIds = salesList.map((sale) => sale.id);
+  const payments =
+    saleIds.length > 0
+      ? await getDb()
+          .select({
+            id: salePayments.id,
+            saleId: salePayments.saleId,
+            amount: salePayments.amount,
+            paymentDate: salePayments.paymentDate,
+            paymentMethod: salePayments.paymentMethod,
+            reference: salePayments.reference,
+            notes: salePayments.notes,
+            receiptUrl: salePayments.receiptUrl,
+            createdAt: salePayments.createdAt,
+          })
+          .from(salePayments)
+          .where(and(inArray(salePayments.saleId, saleIds), isNull(salePayments.deletedAt)))
+      : [];
+
+  return salesList.map((sale) => {
+    const salePaymentList = payments
+      .filter((payment) => payment.saleId === sale.id)
+      .sort((a, b) => String(b.paymentDate).localeCompare(String(a.paymentDate)));
+    return {
+      ...sale,
+      payments: salePaymentList,
+      ...getPaymentSummary(sale.amount, salePaymentList),
+    };
+  });
 }
 
 export async function createSale(input: unknown, items: SaleItemInput[] = []) {
@@ -148,6 +182,15 @@ export async function createSale(input: unknown, items: SaleItemInput[] = []) {
         status,
       })
       .returning({ id: sales.id });
+
+    if (isPaid) {
+      await db.insert(salePayments).values({
+        saleId: newSale.id,
+        amount: rest.amount,
+        paymentDate: paymentDate || rest.date,
+        notes: "Pago registrado al crear la venta",
+      });
+    }
 
     if (items.length > 0) {
       await db.insert(saleItems).values(
@@ -331,6 +374,19 @@ export async function markSaleAsPaid(id: string, input: unknown) {
       return { error: { _form: ["No se puede marcar como pagada una venta anulada"] } };
     }
     const status = existingSale.status === "INVOICED" || existingSale.status === "PENDING" ? "INVOICED_PAID" : "PAID";
+    const [saleAmount] = await getDb().select({ amount: sales.amount }).from(sales).where(eq(sales.id, id)).limit(1);
+    const existingPayments = await getDb()
+      .select({ amount: salePayments.amount })
+      .from(salePayments)
+      .where(and(eq(salePayments.saleId, id), isNull(salePayments.deletedAt)));
+    if (saleAmount && existingPayments.length === 0) {
+      await getDb().insert(salePayments).values({
+        saleId: id,
+        amount: saleAmount.amount,
+        paymentDate: parsed.data.paymentDate,
+        notes: "Pago registrado al marcar la venta como pagada",
+      });
+    }
     await getDb()
       .update(sales)
       .set({ status, paymentDate: parsed.data.paymentDate })
@@ -342,8 +398,47 @@ export async function markSaleAsPaid(id: string, input: unknown) {
   return { success: true };
 }
 
-export async function changeSaleStatus(id: string, input: unknown) {
-  const parsed = changeSaleStatusSchema.safeParse(input);
+async function syncSalePaymentState(id: string) {
+  const [sale] = await getDb()
+    .select({
+      status: sales.status,
+      amount: sales.amount,
+      invoiceNumber: sales.invoiceNumber,
+    })
+    .from(sales)
+    .where(eq(sales.id, id))
+    .limit(1);
+
+  if (!sale || sale.status === "CANCELLED") return;
+
+  const payments = await getDb()
+    .select({
+      amount: salePayments.amount,
+      paymentDate: salePayments.paymentDate,
+    })
+    .from(salePayments)
+    .where(and(eq(salePayments.saleId, id), isNull(salePayments.deletedAt)));
+
+  const activePayments = payments.filter(Boolean);
+  const paidAmount = activePayments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+  const saleAmount = parseFloat(sale.amount);
+  const isInvoiced = !!sale.invoiceNumber || sale.status === "PENDING";
+  const paymentDate = activePayments.sort((a, b) => String(b.paymentDate).localeCompare(String(a.paymentDate)))[0]?.paymentDate ?? null;
+
+  let status = sale.status;
+  if (paidAmount <= 0) {
+    status = isInvoiced ? "INVOICED" : "PENDING_INVOICE";
+  } else if (paidAmount >= saleAmount) {
+    status = isInvoiced ? "INVOICED_PAID" : "PAID";
+  } else {
+    status = isInvoiced ? "INVOICED" : "PENDING_INVOICE";
+  }
+
+  await getDb().update(sales).set({ status, paymentDate }).where(eq(sales.id, id));
+}
+
+export async function createSalePayment(id: string, input: unknown) {
+  const parsed = salePaymentSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
   }
@@ -353,50 +448,73 @@ export async function changeSaleStatus(id: string, input: unknown) {
     return auth;
   }
 
-  const nextStatus = parsed.data.targetStatus as ChangeableSaleStatus;
-  const shouldKeepInvoice = nextStatus === "INVOICED" || nextStatus === "INVOICED_PAID";
-  const shouldKeepPayment = nextStatus === "PAID" || nextStatus === "INVOICED_PAID";
-
   if (USE_MOCK) {
     const sale = mockGetSalesWithClients().find((item) => item.id === id);
     if (!sale) {
       return { error: { _form: ["Venta no encontrada"] } };
     }
     if (sale.status === "CANCELLED") {
-      return { error: { _form: ["No se puede cambiar el estado de una venta anulada"] } };
+      return { error: { _form: ["No se pueden registrar pagos en una venta anulada"] } };
     }
-    if (normalizeChangeableSaleStatus(sale.status) === nextStatus) {
-      return { error: { _form: ["La venta ya tiene ese estado"] } };
+    const nextPaid = parseFloat(sale.paidAmount ?? "0") + parseFloat(parsed.data.amount);
+    if (nextPaid > parseFloat(sale.amount) + 0.001) {
+      return { error: { amount: ["El pago supera el saldo pendiente"] } };
     }
-    mockChangeSaleStatus(id, parsed.data);
+    mockCreateSalePayment(id, parsed.data);
   } else {
     const existingSale = await getExistingSale(id);
     if (!existingSale) {
       return { error: { _form: ["Venta no encontrada"] } };
     }
     if (existingSale.status === "CANCELLED") {
-      return { error: { _form: ["No se puede cambiar el estado de una venta anulada"] } };
-    }
-    if (normalizeChangeableSaleStatus(existingSale.status) === nextStatus) {
-      return { error: { _form: ["La venta ya tiene ese estado"] } };
+      return { error: { _form: ["No se pueden registrar pagos en una venta anulada"] } };
     }
 
-    await getDb()
-      .update(sales)
-      .set({
-        status: nextStatus,
-        invoiceNumber: shouldKeepInvoice ? parsed.data.invoiceNumber?.trim() || null : null,
-        invoiceDate: shouldKeepInvoice ? parsed.data.invoiceDate || null : null,
-        paymentDate: shouldKeepPayment ? parsed.data.paymentDate || null : null,
-        documentUrl: shouldKeepInvoice ? existingSale.documentUrl : null,
-      })
-      .where(eq(sales.id, id));
-
-    if (!shouldKeepInvoice && existingSale.documentUrl) {
-      await deleteR2Object(existingSale.documentUrl).catch((error) => {
-        console.error("[sales.changeSaleStatus.deleteDocument]", error);
-      });
+    const existingPayments = await getDb()
+      .select({ amount: salePayments.amount })
+      .from(salePayments)
+      .where(and(eq(salePayments.saleId, id), isNull(salePayments.deletedAt)));
+    const currentPaid = existingPayments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+    if (currentPaid + parseFloat(parsed.data.amount) > parseFloat(existingSale.amount) + 0.001) {
+      return { error: { amount: ["El pago supera el saldo pendiente"] } };
     }
+
+    await getDb().insert(salePayments).values({
+      saleId: id,
+      amount: parsed.data.amount,
+      paymentDate: parsed.data.paymentDate,
+      paymentMethod: parsed.data.paymentMethod || null,
+      reference: parsed.data.reference || null,
+      notes: parsed.data.notes || null,
+      receiptUrl: parsed.data.receiptUrl || null,
+    });
+    await syncSalePaymentState(id);
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function deleteSalePayment(id: string) {
+  const auth = await authorizeAction("sales:update");
+  if ("error" in auth) {
+    return auth;
+  }
+
+  if (USE_MOCK) {
+    mockDeleteSalePayment(id);
+  } else {
+    const [payment] = await getDb()
+      .select({ saleId: salePayments.saleId })
+      .from(salePayments)
+      .where(eq(salePayments.id, id))
+      .limit(1);
+    if (!payment) {
+      return { error: { _form: ["Pago no encontrado"] } };
+    }
+    await getDb().update(salePayments).set({ deletedAt: new Date() }).where(eq(salePayments.id, id));
+    await syncSalePaymentState(payment.saleId);
   }
 
   revalidatePath("/sales");
@@ -443,6 +561,53 @@ export async function markSaleAsInvoiced(id: string, input: unknown) {
     ) {
       await deleteR2Object(existingSale.documentUrl).catch((error) => {
         console.error("[sales.markSaleAsInvoiced.deleteOldDocument]", error);
+      });
+    }
+  }
+
+  revalidatePath("/sales");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function revertSaleInvoice(id: string) {
+  const auth = await authorizeAction("sales:update");
+  if ("error" in auth) {
+    return auth;
+  }
+
+  if (USE_MOCK) {
+    const sale = mockGetSalesWithClients().find((item) => item.id === id);
+    if (!sale) {
+      return { error: { _form: ["Venta no encontrada"] } };
+    }
+    if (sale.status !== "INVOICED" && sale.status !== "INVOICED_PAID" && sale.status !== "PENDING") {
+      return { error: { _form: ["Solo se pueden revertir facturas de ventas facturadas"] } };
+    }
+    mockRevertSaleInvoice(id);
+  } else {
+    const existingSale = await getExistingSale(id);
+    if (!existingSale) {
+      return { error: { _form: ["Venta no encontrada"] } };
+    }
+    if (existingSale.status !== "INVOICED" && existingSale.status !== "INVOICED_PAID" && existingSale.status !== "PENDING") {
+      return { error: { _form: ["Solo se pueden revertir facturas de ventas facturadas"] } };
+    }
+
+    await getDb()
+      .update(sales)
+      .set({
+        invoiceNumber: null,
+        invoiceDate: null,
+        documentUrl: null,
+      })
+      .where(eq(sales.id, id));
+
+    await syncSalePaymentState(id);
+
+    if (existingSale.documentUrl) {
+      await deleteR2Object(existingSale.documentUrl).catch((error) => {
+        console.error("[sales.revertSaleInvoice.deleteDocument]", error);
       });
     }
   }

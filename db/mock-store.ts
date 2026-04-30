@@ -107,6 +107,19 @@ export type MockSaleItem = {
   createdAt: Date;
 };
 
+export type MockSalePayment = {
+  id: string;
+  saleId: string;
+  amount: string;
+  paymentDate: string;
+  paymentMethod: string | null;
+  reference: string | null;
+  notes: string | null;
+  receiptUrl: string | null;
+  createdAt: Date;
+  deletedAt: Date | null;
+};
+
 export type MockSupply = {
   id: string;
   pm: string;
@@ -133,6 +146,7 @@ type Store = {
   checks: MockCheck[];
   supplies: MockSupply[];
   saleItems: MockSaleItem[];
+  salePayments: MockSalePayment[];
 };
 
 declare global {
@@ -289,7 +303,22 @@ function initStore(): Store {
     { id: "sp8", pm: "PM-0008", name: "Equipo de Venoclisis", description: "Con filtro de 15 micras y cámara de goteo", unitPrice: "980.00", priceWithVat: "1185.80", category: "Descartables", stock: 75, lotNumber: "L2024-008", expiryDate: "2027-06-30", status: "en_deposito", createdAt: new Date(), deletedAt: null },
   ];
 
-  return { banks, clients, providers, patients, sales, purchases, checks, supplies, saleItems: [] };
+  const salePayments: MockSalePayment[] = sales
+    .filter((sale) => sale.paymentDate && ["PAID", "INVOICED_PAID"].includes(sale.status))
+    .map((sale) => ({
+      id: crypto.randomUUID(),
+      saleId: sale.id,
+      amount: sale.amount,
+      paymentDate: sale.paymentDate!,
+      paymentMethod: null,
+      reference: null,
+      notes: "Pago migrado desde la venta",
+      receiptUrl: null,
+      createdAt: new Date(),
+      deletedAt: null,
+    }));
+
+  return { banks, clients, providers, patients, sales, purchases, checks, supplies, saleItems: [], salePayments };
 }
 
 if (!global.__mockStore_v4) {
@@ -303,6 +332,7 @@ if (!global.__mockStore_v4) {
   if (!global.__mockStore_v4.patients) global.__mockStore_v4.patients = s.patients;
   if (!global.__mockStore_v4.supplies) global.__mockStore_v4.supplies = s.supplies;
   if (!global.__mockStore_v4.saleItems) global.__mockStore_v4.saleItems = [];
+  if (!global.__mockStore_v4.salePayments) global.__mockStore_v4.salePayments = [];
   // Migrate supplies: add new fields if missing
   for (const sup of global.__mockStore_v4.supplies) {
     if (!("priceWithVat" in sup)) (sup as MockSupply).priceWithVat = null;
@@ -317,6 +347,23 @@ if (!global.__mockStore_v4) {
     sale.invoiceDate ??= sale.invoiceNumber ? sale.date : null;
     sale.cancellationDate ??= sale.status === "CANCELLED" ? sale.date : null;
     (sale as MockSale).deliveredAt ??= null;
+  }
+  for (const sale of global.__mockStore_v4.sales) {
+    const hasPayment = global.__mockStore_v4.salePayments.some((payment) => payment.saleId === sale.id && !payment.deletedAt);
+    if (!hasPayment && sale.paymentDate && (sale.status === "PAID" || sale.status === "INVOICED_PAID")) {
+      global.__mockStore_v4.salePayments.push({
+        id: crypto.randomUUID(),
+        saleId: sale.id,
+        amount: sale.amount,
+        paymentDate: sale.paymentDate,
+        paymentMethod: null,
+        reference: null,
+        notes: "Pago migrado desde la venta",
+        receiptUrl: null,
+        createdAt: new Date(),
+        deletedAt: null,
+      });
+    }
   }
   // Add paymentMethod to any purchases that are missing it
   for (const p of global.__mockStore_v4.purchases) {
@@ -348,6 +395,7 @@ if (!global.__mockStore_v4) {
     ...global.__mockStore_v4.purchases,
     ...global.__mockStore_v4.checks,
     ...(global.__mockStore_v4.supplies ?? []),
+    ...(global.__mockStore_v4.salePayments ?? []),
   ];
   for (const e of allEntities) {
     if (!("deletedAt" in e)) (e as { deletedAt: null }).deletedAt = null;
@@ -454,12 +502,51 @@ export function mockSoftDeleteProvider(id: string) {
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
 
+function getActiveSalePayments(saleId: string) {
+  return store.salePayments.filter((payment) => payment.saleId === saleId && !payment.deletedAt);
+}
+
+function sumSalePayments(saleId: string) {
+  return getActiveSalePayments(saleId).reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+}
+
+function syncSalePaymentState(saleId: string) {
+  const sale = store.sales.find((sale) => sale.id === saleId);
+  if (!sale || sale.status === "CANCELLED") return;
+
+  const paidAmount = sumSalePayments(saleId);
+  const saleAmount = parseFloat(sale.amount);
+  const isInvoiced = !!sale.invoiceNumber || sale.status === "PENDING";
+
+  if (paidAmount <= 0) {
+    sale.status = isInvoiced ? "INVOICED" : "PENDING_INVOICE";
+    sale.paymentDate = null;
+    return;
+  }
+
+  sale.status = isInvoiced && paidAmount >= saleAmount ? "INVOICED_PAID" : paidAmount >= saleAmount ? "PAID" : isInvoiced ? "INVOICED" : "PENDING_INVOICE";
+  sale.paymentDate = getActiveSalePayments(saleId).sort((a, b) => b.paymentDate.localeCompare(a.paymentDate))[0]?.paymentDate ?? null;
+}
+
+function withPaymentSummary<T extends MockSale>(sale: T) {
+  const payments = getActiveSalePayments(sale.id).sort((a, b) => b.paymentDate.localeCompare(a.paymentDate));
+  const paidAmount = payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+  const amount = parseFloat(sale.amount);
+  return {
+    ...sale,
+    payments,
+    paidAmount: paidAmount.toFixed(2),
+    balance: Math.max(amount - paidAmount, 0).toFixed(2),
+    paymentStatus: paidAmount <= 0 ? "UNPAID" : paidAmount >= amount ? "PAID" : "PARTIALLY_PAID",
+  };
+}
+
 export function mockGetSalesWithClients() {
   return [...store.sales]
     .filter((s) => !s.deletedAt)
     .sort((a, b) => b.date.localeCompare(a.date))
     .map((sale) => ({
-      ...sale,
+      ...withPaymentSummary(sale),
       clientName: store.clients.find((c) => c.id === sale.clientId)?.name ?? null,
       items: store.saleItems.filter((i) => i.saleId === sale.id),
     }));
@@ -514,6 +601,20 @@ export function mockCreateSale(
     createdAt: new Date(),
     deletedAt: null,
   });
+  if (data.isPaid) {
+    store.salePayments.push({
+      id: crypto.randomUUID(),
+      saleId,
+      amount: data.amount,
+      paymentDate: data.paymentDate || data.date,
+      paymentMethod: null,
+      reference: null,
+      notes: "Pago registrado al crear la venta",
+      receiptUrl: null,
+      createdAt: new Date(),
+      deletedAt: null,
+    });
+  }
   for (const item of items) {
     store.saleItems.push({
       id: crypto.randomUUID(),
@@ -595,6 +696,16 @@ export function mockMarkSaleAsInvoiced(id: string, data: { invoiceNumber: string
   }
 }
 
+export function mockRevertSaleInvoice(id: string) {
+  const s = store.sales.find((s) => s.id === id);
+  if (!s || s.status === "CANCELLED") return;
+
+  s.invoiceNumber = null;
+  s.invoiceDate = null;
+  s.documentUrl = null;
+  syncSalePaymentState(id);
+}
+
 export function mockSoftDeleteSale(id: string) {
   const saleItems = store.saleItems.filter((i) => i.saleId === id);
   for (const item of saleItems) {
@@ -611,28 +722,47 @@ export function mockMarkSaleAsPaid(id: string, data: { paymentDate: string }) {
   if (s) {
     s.status = s.status === "INVOICED" || s.status === "PENDING" ? "INVOICED_PAID" : "PAID";
     s.paymentDate = data.paymentDate;
+    if (sumSalePayments(id) <= 0) {
+      store.salePayments.push({
+        id: crypto.randomUUID(),
+        saleId: id,
+        amount: s.amount,
+        paymentDate: data.paymentDate,
+        paymentMethod: null,
+        reference: null,
+        notes: "Pago registrado al marcar la venta como pagada",
+        receiptUrl: null,
+        createdAt: new Date(),
+        deletedAt: null,
+      });
+    }
   }
 }
 
-export function mockChangeSaleStatus(
-  id: string,
-  data: {
-    targetStatus: "PENDING_INVOICE" | "PAID" | "INVOICED" | "INVOICED_PAID";
-    invoiceNumber?: string;
-    invoiceDate?: string;
-    paymentDate?: string;
-  }
+export function mockCreateSalePayment(
+  saleId: string,
+  data: { amount: string; paymentDate: string; paymentMethod?: string; reference?: string; notes?: string; receiptUrl?: string }
 ) {
-  const s = store.sales.find((s) => s.id === id);
-  if (!s || s.status === "CANCELLED") return;
-
-  Object.assign(s, {
-    status: data.targetStatus,
-    invoiceNumber: data.targetStatus === "INVOICED" || data.targetStatus === "INVOICED_PAID" ? data.invoiceNumber || null : null,
-    invoiceDate: data.targetStatus === "INVOICED" || data.targetStatus === "INVOICED_PAID" ? data.invoiceDate || null : null,
-    paymentDate: data.targetStatus === "PAID" || data.targetStatus === "INVOICED_PAID" ? data.paymentDate || null : null,
-    documentUrl: data.targetStatus === "INVOICED" || data.targetStatus === "INVOICED_PAID" ? s.documentUrl : null,
+  store.salePayments.push({
+    id: crypto.randomUUID(),
+    saleId,
+    amount: data.amount,
+    paymentDate: data.paymentDate,
+    paymentMethod: data.paymentMethod || null,
+    reference: data.reference || null,
+    notes: data.notes || null,
+    receiptUrl: data.receiptUrl || null,
+    createdAt: new Date(),
+    deletedAt: null,
   });
+  syncSalePaymentState(saleId);
+}
+
+export function mockDeleteSalePayment(id: string) {
+  const payment = store.salePayments.find((payment) => payment.id === id);
+  if (!payment) return;
+  payment.deletedAt = new Date();
+  syncSalePaymentState(payment.saleId);
 }
 
 export function mockCancelSale(id: string, data: { creditNoteNumber: string; creditNoteAmount: string; cancellationDate: string; creditNoteUrl?: string }) {

@@ -54,7 +54,7 @@ const SALE_STATUS: Record<string, string> = {
   PENDING_INVOICE: "Pend. Facturar",
   PENDING: "Facturada",
   INVOICED: "Facturada",
-  PAID: "Pagada",
+  PAID: "Pend. Facturar y Pagada",
   INVOICED_PAID: "Facturada y Pagada",
   CANCELLED: "Anulada",
 };
