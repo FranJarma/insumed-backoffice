@@ -128,33 +128,21 @@ export async function uploadFile(file: File, options: UploadOptions): Promise<st
     fileToUpload = await compressImage(file);
   }
 
+  const formData = new FormData();
+  formData.append("file", fileToUpload);
+  formData.append("directory", options.directory);
+  formData.append("date", options.date);
+
   const response = await fetch("/api/upload", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contentType: fileToUpload.type,
-      directory: options.directory,
-      date: options.date,
-      size: fileToUpload.size,
-    }),
+    body: formData,
   });
 
   if (!response.ok) {
     const { error } = await response.json().catch(() => ({ error: "Error desconocido" }));
-    throw new Error(error ?? "No se pudo obtener la URL de subida");
+    throw new Error(error ?? "No se pudo subir el archivo");
   }
 
-  const { uploadUrl, key } = (await response.json()) as { uploadUrl: string; key: string };
-
-  const upload = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": fileToUpload.type },
-    body: fileToUpload,
-  });
-
-  if (!upload.ok) {
-    throw new Error("Error al subir el archivo a R2");
-  }
-
+  const { key } = (await response.json()) as { key: string };
   return key;
 }

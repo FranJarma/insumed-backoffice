@@ -857,6 +857,10 @@ export function mockMarkPurchaseAsPaid(id: string) {
   const p = store.purchases.find((p) => p.id === id);
   if (p) p.status = "PAID";
 }
+export function mockRevertPurchasePayment(id: string) {
+  const p = store.purchases.find((p) => p.id === id);
+  if (p) p.status = "PENDING";
+}
 
 // ─── Checks ───────────────────────────────────────────────────────────────────
 

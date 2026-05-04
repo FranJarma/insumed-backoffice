@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, CircleDollarSign } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, CircleDollarSign, RotateCcw } from "lucide-react";
 import { fileUrl } from "@/lib/upload";
 
 import {
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { EditPurchaseDialog } from "./EditPurchaseDialog";
+import { RevertPurchasePaymentDialog } from "./RevertPurchasePaymentDialog";
 import { markPurchaseAsPaid, deletePurchase } from "../actions";
 import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
 import { downloadPurchasesExcel, downloadPurchasesPdf } from "@/lib/download";
@@ -67,6 +68,7 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
   const [isPending, startTransition] = useTransition();
   const [editPurchase, setEditPurchase] = useState<PurchaseRow | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [revertPaymentId, setRevertPaymentId] = useState<string | null>(null);
   const [isFullYear, setIsFullYear] = useState(false);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
@@ -296,6 +298,15 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
                           </Tooltip>
                         </>
                       )}
+                      {purchase.status === "PAID" && (
+                        <Tooltip label="Revertir pago">
+                          <Button size="sm" variant="ghost"
+                            className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700"
+                            onClick={() => setRevertPaymentId(purchase.id)} disabled={isPending}>
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </Button>
+                        </Tooltip>
+                      )}
                       <Tooltip label="Eliminar">
                         <Button size="sm" variant="ghost"
                           className="h-7 w-7 p-0 text-destructive hover:text-destructive"
@@ -317,6 +328,13 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
         purchase={editPurchase}
         providers={providers}
         onOpenChange={(o) => !o && setEditPurchase(null)}
+      />
+
+      <RevertPurchasePaymentDialog
+        purchaseId={revertPaymentId}
+        open={revertPaymentId !== null}
+        onOpenChange={(open) => !open && setRevertPaymentId(null)}
+        onSuccess={() => { setRevertPaymentId(null); router.refresh(); }}
       />
 
       <ConfirmDeleteDialog

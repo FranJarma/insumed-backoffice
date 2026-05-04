@@ -6,6 +6,7 @@ import {
   mockCreatePurchase,
   mockGetPurchases,
   mockMarkPurchaseAsPaid,
+  mockRevertPurchasePayment,
   mockSoftDeletePurchase,
   mockUpdatePurchase,
 } from "@/db/mock-store";
@@ -27,6 +28,7 @@ async function getExistingPurchase(id: string) {
     .select({
       category: purchases.category,
       remitoUrl: purchases.remitoUrl,
+      status: purchases.status,
     })
     .from(purchases)
     .where(eq(purchases.id, id))
@@ -187,6 +189,47 @@ export async function markPurchaseAsPaid(id: string) {
     }
 
     await getDb().update(purchases).set({ status: "PAID" }).where(eq(purchases.id, id));
+  }
+
+  revalidatePath("/purchases");
+  revalidatePath("/misc-purchases");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function revertPurchasePayment(id: string) {
+  if (USE_MOCK) {
+    const purchase = mockGetPurchases().find((item) => item.id === id);
+    if (!purchase) {
+      return { error: { _form: ["Compra no encontrada"] } };
+    }
+
+    const auth = await authorizeAction(getPurchasePermission(purchase.category, "update"));
+    if ("error" in auth) {
+      return auth;
+    }
+
+    if (purchase.status !== "PAID") {
+      return { error: { _form: ["Solo se pueden revertir compras pagadas"] } };
+    }
+
+    mockRevertPurchasePayment(id);
+  } else {
+    const existingPurchase = await getExistingPurchase(id);
+    if (!existingPurchase) {
+      return { error: { _form: ["Compra no encontrada"] } };
+    }
+
+    const auth = await authorizeAction(getPurchasePermission(existingPurchase.category, "update"));
+    if ("error" in auth) {
+      return auth;
+    }
+
+    if (existingPurchase.status !== "PAID") {
+      return { error: { _form: ["Solo se pueden revertir compras pagadas"] } };
+    }
+
+    await getDb().update(purchases).set({ status: "PENDING" }).where(eq(purchases.id, id));
   }
 
   revalidatePath("/purchases");

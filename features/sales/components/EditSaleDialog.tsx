@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { FileText, ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { createSaleSchema, type CreateSaleInput, type SaleItemInput } from "../t
 import type { MockSupply } from "@/db/mock-store";
 import { ClientAutocomplete } from "./ClientAutocomplete";
 import { formatCurrency } from "@/lib/utils";
+import { deleteUploadedFile, fileUrl, uploadFile, validateFile } from "@/lib/upload";
 
 type ClientOption = { id: string; name: string; cuit: string };
 type PatientOption = { id: string; name: string; clientId: string };
@@ -47,6 +48,7 @@ type SaleRow = {
   patient: string | null;
   amount: string;
   status: string;
+  documentUrl: string | null;
   items?: SaleItem[];
 };
 
@@ -90,6 +92,12 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
   const [selectedSupplyId, setSelectedSupplyId] = useState("");
   const [itemQty, setItemQty] = useState("1");
   const [itemError, setItemError] = useState("");
+  const [documentKey, setDocumentKey] = useState<string | undefined>();
+  const [documentPreview, setDocumentPreview] = useState<string | undefined>();
+  const [documentName, setDocumentName] = useState<string | undefined>();
+  const [documentError, setDocumentError] = useState<string | undefined>();
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const itemsTotal = items.reduce((sum, i) => sum + i.subtotal, 0);
 
@@ -116,6 +124,10 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
     setSelectedSupplyId("");
     setItemQty("1");
     setItemError("");
+    setDocumentKey(sale?.documentUrl ?? undefined);
+    setDocumentPreview(sale?.documentUrl && !sale.documentUrl.toLowerCase().endsWith(".pdf") ? fileUrl(sale.documentUrl) : undefined);
+    setDocumentName(sale?.documentUrl?.split("/").pop() ?? undefined);
+    setDocumentError(undefined);
   }, [sale?.id]);
 
   const {
@@ -139,6 +151,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
           isInvoiced: sale.status === "INVOICED" || sale.status === "INVOICED_PAID" || (sale.status !== "PENDING_INVOICE" && sale.status !== "PAID" && !!sale.invoiceNumber),
           isPaid: sale.status === "PAID" || sale.status === "INVOICED_PAID",
           paymentDate: sale.paymentDate ?? sale.date,
+          documentUrl: sale.documentUrl ?? undefined,
         }
       : undefined,
   });
@@ -147,6 +160,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
   const invoiceType = watch("invoiceType");
   const isInvoiced = watch("isInvoiced");
   const isPaid = watch("isPaid");
+  const watchDate = watch("date");
 
   const handleClientChange = (id: string) => {
     setLocalClientId(id);
@@ -197,6 +211,77 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
     }
   };
 
+  const revokeBlobPreview = () => {
+    if (documentPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(documentPreview);
+    }
+  };
+
+  const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      setDocumentError(validationError);
+      event.target.value = "";
+      return;
+    }
+
+    setDocumentError(undefined);
+    setIsUploading(true);
+    revokeBlobPreview();
+
+    if (file.type.startsWith("image/")) {
+      setDocumentPreview(URL.createObjectURL(file));
+    } else {
+      setDocumentPreview(undefined);
+    }
+
+    try {
+      const key = await uploadFile(file, {
+        directory: "facturas",
+        date: watchDate || sale?.date || new Date().toISOString().slice(0, 10),
+      });
+      if (documentKey && documentKey !== sale?.documentUrl) {
+        void deleteUploadedFile(documentKey).catch(() => undefined);
+      }
+      setDocumentKey(key);
+      setDocumentName(file.name);
+      setValue("documentUrl", key, { shouldValidate: true });
+    } catch {
+      setDocumentError("Error al subir el archivo. Intente de nuevo.");
+      revokeBlobPreview();
+      setDocumentPreview(documentKey && !documentKey.toLowerCase().endsWith(".pdf") ? fileUrl(documentKey) : undefined);
+    } finally {
+      setIsUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const clearDocument = () => {
+    if (documentKey && documentKey !== sale?.documentUrl) {
+      void deleteUploadedFile(documentKey).catch(() => undefined);
+    }
+    revokeBlobPreview();
+    setDocumentKey(sale?.documentUrl ?? undefined);
+    setDocumentPreview(sale?.documentUrl && !sale.documentUrl.toLowerCase().endsWith(".pdf") ? fileUrl(sale.documentUrl) : undefined);
+    setDocumentName(sale?.documentUrl?.split("/").pop() ?? undefined);
+    setDocumentError(undefined);
+    setValue("documentUrl", sale?.documentUrl ?? undefined, { shouldValidate: true });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      if (documentKey && documentKey !== sale?.documentUrl) {
+        void deleteUploadedFile(documentKey).catch(() => undefined);
+      }
+      revokeBlobPreview();
+    }
+    onOpenChange(open);
+  };
+
   const onSubmit = async (data: CreateSaleInput) => {
     if (!sale) return;
     const saleItemInputs: SaleItemInput[] = items.map((i) => ({
@@ -208,7 +293,7 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
       priceWithVat: (i.priceWithVat ?? i.unitPrice).toString(),
       subtotal: i.subtotal.toString(),
     }));
-    const result = await updateSale(sale.id, data, saleItemInputs);
+    const result = await updateSale(sale.id, { ...data, documentUrl: documentKey }, saleItemInputs);
     if ("success" in result) {
       onOpenChange(false);
       router.refresh();
@@ -216,9 +301,11 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
   };
 
   const priceCol = invoiceType === "B" ? "P. c/IVA" : "P. Unit.";
+  const hasFile = !!documentKey || !!documentPreview;
+  const isPdf = documentName?.toLowerCase().endsWith(".pdf") || documentKey?.toLowerCase().endsWith(".pdf");
 
   return (
-    <Dialog open={!!sale} onOpenChange={onOpenChange}>
+    <Dialog open={!!sale} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="flex flex-col sm:max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>Editar Venta</DialogTitle>
@@ -477,6 +564,53 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
                       <p className="text-xs text-destructive">{errors.invoiceDate.message}</p>
                     )}
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Comprobante <span className="text-xs text-muted-foreground">(opcional - imagen o PDF)</span></Label>
+                    {hasFile ? (
+                      <div className="relative w-full overflow-hidden rounded-md border">
+                        {isPdf ? (
+                          <div className="flex items-center gap-3 bg-muted/50 px-4 py-3">
+                            <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                            {documentKey ? (
+                              <a
+                                href={fileUrl(documentKey)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="truncate text-sm text-primary hover:underline"
+                              >
+                                {documentName ?? "Comprobante"}
+                              </a>
+                            ) : (
+                              <span className="truncate text-sm text-muted-foreground">{documentName}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <img src={documentPreview} alt="Factura" className="max-h-48 w-full bg-muted object-contain" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={clearDocument}
+                          className="absolute right-2 top-2 rounded-full bg-background/90 p-1 shadow-sm hover:bg-background"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 ${isUploading ? "pointer-events-none opacity-60" : ""}`}>
+                        {isUploading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <ImagePlus className="h-4 w-4 shrink-0" />}
+                        <span>{isUploading ? "Subiendo archivo..." : "Adjuntar PDF o imagen"}</span>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={handleFileSelect}
+                          disabled={isUploading}
+                        />
+                      </label>
+                    )}
+                    {documentError && <p className="text-xs text-destructive">{documentError}</p>}
+                  </div>
                   </div>
                 )}
               </div>
@@ -486,10 +620,10 @@ export function EditSaleDialog({ sale, clients, patients, supplies, categories, 
 
           {/* Footer sticky */}
           <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background shrink-0">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => handleDialogOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isUploading}>
               {isSubmitting ? "Guardando..." : "Guardar Cambios"}
             </Button>
           </div>

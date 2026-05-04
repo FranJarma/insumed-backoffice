@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import {
@@ -15,18 +14,17 @@ import { getClientIpFromHeaders, isTrustedOrigin } from "@/lib/request-security"
 import { hitRateLimit, toRateLimitResponse } from "@/lib/rate-limit";
 import { deleteR2Object, r2, R2_BUCKET } from "@/lib/r2";
 
-const uploadRequestSchema = z.object({
-  contentType: z.string().min(1),
-  directory: z.string().min(1),
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}(-\d{2})?$/, "date debe tener formato YYYY-MM o YYYY-MM-DD"),
-  size: z.number().int().positive(),
-});
-
 const deleteRequestSchema = z.object({
   key: z.string().min(1),
 });
+
+type ParsedUploadRequest = {
+  contentType: string;
+  directory: string;
+  date: string;
+  size: number;
+  body?: Buffer;
+};
 
 function tooManyRequests(message: string, retryAfterMs: number) {
   const retry = toRateLimitResponse(retryAfterMs);
@@ -34,6 +32,31 @@ function tooManyRequests(message: string, retryAfterMs: number) {
     { error: message },
     { status: 429, headers: { "Retry-After": String(retry.retryAfterSeconds) } }
   );
+}
+
+async function parseUploadRequest(req: NextRequest): Promise<ParsedUploadRequest | NextResponse> {
+  const requestContentType = req.headers.get("content-type") ?? "";
+
+  if (!requestContentType.toLowerCase().startsWith("multipart/form-data")) {
+    return NextResponse.json({ error: "Payload de upload invalido" }, { status: 400 });
+  }
+
+  const formData = await req.formData();
+  const file = formData.get("file");
+  const directory = formData.get("directory");
+  const date = formData.get("date");
+
+  if (!(file instanceof File) || typeof directory !== "string" || typeof date !== "string") {
+    return NextResponse.json({ error: "Payload de upload invalido" }, { status: 400 });
+  }
+
+  return {
+    contentType: file.type,
+    directory,
+    date,
+    size: file.size,
+    body: Buffer.from(await file.arrayBuffer()),
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -50,12 +73,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const parsed = uploadRequestSchema.safeParse(await req.json());
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Payload de upload invalido" }, { status: 400 });
+    const uploadRequest = await parseUploadRequest(req);
+    if (uploadRequest instanceof NextResponse) {
+      return uploadRequest;
     }
 
-    const { contentType, directory, date, size } = parsed.data;
+    const { contentType, directory, date, size, body } = uploadRequest;
 
     if (!isAllowedUploadDirectory(directory)) {
       return NextResponse.json({ error: "Directorio invalido" }, { status: 400 });
@@ -87,18 +110,21 @@ export async function POST(req: NextRequest) {
 
     const key = buildRandomR2Key({ directory, date, contentType });
 
-    const command = new PutObjectCommand({
+    await r2.send(new PutObjectCommand({
       Bucket: R2_BUCKET,
       Key: key,
       ContentType: contentType,
-      ContentLength: size,
-    });
+      Body: body,
+    }));
 
-    const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 120 });
-    return NextResponse.json({ uploadUrl, key });
+    return NextResponse.json({ key });
   } catch (err) {
     console.error("[upload]", err);
-    return NextResponse.json({ error: "Error generando URL de subida" }, { status: 500 });
+    const errorName = err instanceof Error ? err.name : undefined;
+    if (errorName === "AccessDenied" || errorName === "CredentialsProviderError") {
+      return NextResponse.json({ error: "R2 denego la subida. Revisar permisos del token y bucket." }, { status: 403 });
+    }
+    return NextResponse.json({ error: "Error subiendo archivo a R2" }, { status: 500 });
   }
 }
 

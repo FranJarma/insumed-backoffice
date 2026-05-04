@@ -16,6 +16,7 @@ if (
 export const r2 = new S3Client({
   region: "auto",
   endpoint: `https://${requireEnv("R2_ACCOUNT_ID", { allowInMock: true })}.r2.cloudflarestorage.com`,
+  requestChecksumCalculation: "WHEN_REQUIRED",
   credentials: {
     accessKeyId: requireEnv("R2_ACCESS_KEY_ID", { allowInMock: true }),
     secretAccessKey: requireEnv("R2_SECRET_ACCESS_KEY", { allowInMock: true }),
