@@ -2,13 +2,14 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { XCircle, ChevronLeft, ChevronRight, CircleDollarSign, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, ArrowDownUp, Receipt, RotateCcw } from "lucide-react";
+import { XCircle, CircleDollarSign, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, ArrowDownUp, Receipt, RotateCcw } from "lucide-react";
 
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { currentMonthKey, currentYear, PeriodFilter } from "@/components/period-filter";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CancelSaleDialog } from "./CancelSaleDialog";
@@ -17,7 +18,7 @@ import { InvoiceSaleDialog } from "./InvoiceSaleDialog";
 import { RevertSaleInvoiceDialog } from "./RevertSaleInvoiceDialog";
 import { SalePaymentsDialog } from "./SalePaymentsDialog";
 import { deleteSale } from "../actions";
-import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
+import { formatCurrency, formatDate, monthLabel } from "@/lib/utils";
 import { downloadSalesExcel, downloadSalesPdf } from "@/lib/download";
 import { fileUrl } from "@/lib/upload";
 import type { MockSupply } from "@/db/mock-store";
@@ -84,14 +85,6 @@ const STATUS_VARIANT: Record<SaleStatus, "pending_invoice" | "invoiced" | "paid"
 };
 
 const isPaidStatus = (status: SaleStatus) => status === "PAID" || status === "INVOICED_PAID";
-
-function currentYear() { return new Date().getFullYear(); }
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
 
 const INVOICE_TYPE_LABELS: Record<Exclude<InvoiceTypeFilter, "all">, string> = {
   A: "Factura A",
@@ -207,12 +200,6 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
     [filtered]
   );
 
-  const handleMonthNav = (direction: "prev" | "next") => {
-    const newMonth = direction === "prev" ? prevMonth(effectiveMonth) : nextMonth(effectiveMonth);
-    setSelectedMonth(newMonth);
-    setSelectedYear(parseInt(newMonth.slice(0, 4)));
-  };
-
   const handleInvoiceSort = () => {
     setInvoiceSortDirection((current) => (current === "asc" ? "desc" : current === "desc" ? null : "asc"));
   };
@@ -230,42 +217,14 @@ export function SalesTable({ sales, clients, patients, supplies, categories }: S
     <>
       {/* Barra de filtros */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={selectedYear}
-          onChange={(e) => {
-            const y = parseInt(e.target.value);
-            setSelectedYear(y);
-            setSelectedMonth(`${y}-${selectedMonth.slice(5)}`);
-          }}
-          className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
-        <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm">
-          <input
-            type="checkbox"
-            checked={isFullYear}
-            onChange={(e) => setIsFullYear(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 accent-primary"
-          />
-          Año completo
-        </label>
-
-        {/* Mes */}
-        {!isFullYear && (
-          <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
-            <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted" type="button">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="min-w-[110px] text-center text-sm font-medium">
-              {monthLabel(effectiveMonth)}
-            </span>
-            <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted" type="button">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
+        <PeriodFilter
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          isFullYear={isFullYear}
+          onYearChange={setSelectedYear}
+          onMonthChange={setSelectedMonth}
+          onFullYearChange={setIsFullYear}
+        />
         {/* Cliente */}
         <select
           value={selectedClient}

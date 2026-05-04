@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, CircleDollarSign, RotateCcw } from "lucide-react";
+import { FileSpreadsheet, FileText, ImageIcon, Pencil, Trash2, CircleDollarSign, RotateCcw } from "lucide-react";
 import { fileUrl } from "@/lib/upload";
 
 import {
@@ -10,12 +10,13 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { currentMonthKey, currentYear, PeriodFilter } from "@/components/period-filter";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { EditPurchaseDialog } from "./EditPurchaseDialog";
 import { RevertPurchasePaymentDialog } from "./RevertPurchasePaymentDialog";
 import { markPurchaseAsPaid, deletePurchase } from "../actions";
-import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
+import { formatCurrency, formatDate, monthLabel } from "@/lib/utils";
 import { downloadPurchasesExcel, downloadPurchasesPdf } from "@/lib/download";
 import type { MockProvider } from "@/db/mock-store";
 
@@ -53,16 +54,6 @@ const PAYMENT_LABELS: Record<string, string> = {
   EFECTIVO: "Efectivo",
 };
 
-function currentYear() {
-  return new Date().getFullYear();
-}
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
-
 export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -78,8 +69,8 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
   const effectiveMonth = `${selectedYear}-${selectedMonth.slice(5)}`;
 
   const providerNames = useMemo(
-    () => [...new Set(purchases.map((p) => p.provider))].sort(),
-    [purchases]
+    () => providers.map((provider) => provider.name).sort((a, b) => a.localeCompare(b, "es-AR")),
+    [providers]
   );
 
   const filtered = useMemo(
@@ -110,12 +101,6 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
     });
   };
 
-  const handleMonthNav = (direction: "prev" | "next") => {
-    const newMonth = direction === "prev" ? prevMonth(effectiveMonth) : nextMonth(effectiveMonth);
-    setSelectedMonth(newMonth);
-    setSelectedYear(parseInt(newMonth.slice(0, 4)));
-  };
-
   const periodLabel = isFullYear ? `Año ${selectedYear}` : monthLabel(effectiveMonth);
   const providerLabel = selectedProvider === "all" ? "todos" : selectedProvider.toLowerCase().replace(/\s+/g, "-");
 
@@ -123,45 +108,14 @@ export function PurchasesTable({ purchases, providers }: PurchasesTableProps) {
     <div className="space-y-4">
       {/* Barra de filtros */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Año */}
-        <select
-          value={selectedYear}
-          onChange={(e) => {
-            const y = parseInt(e.target.value);
-            setSelectedYear(y);
-            setSelectedMonth(`${y}-${selectedMonth.slice(5)}`);
-          }}
-          className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {YEARS.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-
-        <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm">
-          <input
-            type="checkbox"
-            checked={isFullYear}
-            onChange={(e) => setIsFullYear(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 accent-primary"
-          />
-          Año completo
-        </label>
-
-        {/* Mes */}
-        {!isFullYear && (
-          <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
-            <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted" type="button">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="min-w-[110px] text-center text-sm font-medium">
-              {monthLabel(effectiveMonth)}
-            </span>
-            <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted" type="button">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+        <PeriodFilter
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          isFullYear={isFullYear}
+          onYearChange={setSelectedYear}
+          onMonthChange={setSelectedMonth}
+          onFullYearChange={setIsFullYear}
+        />
 
         {/* Proveedor */}
         <select

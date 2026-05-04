@@ -2,18 +2,19 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Trash2, CircleCheck, CircleDollarSign, RotateCcw } from "lucide-react";
+import { ImageIcon, Pencil, Trash2, CircleCheck, CircleDollarSign, RotateCcw } from "lucide-react";
 import { fileUrl } from "@/lib/upload";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { currentMonthKey, currentYear, PeriodFilter } from "@/components/period-filter";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { EditCheckDialog } from "./EditCheckDialog";
 import { updateCheckStatus, deleteCheck } from "../actions";
-import { formatCurrency, formatDate, monthLabel, prevMonth, nextMonth } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import type { MockBank, MockCheck } from "@/db/mock-store";
 
 type EntityOption = { id: string; name: string };
@@ -40,32 +41,36 @@ const STATUS_VARIANT: Record<MockCheck["status"], "pending" | "paid" | "cancelle
   RECHAZADO: "cancelled",
 };
 
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-function currentYear() { return new Date().getFullYear(); }
-const YEARS = Array.from({ length: 5 }, (_, i) => currentYear() - 2 + i);
-
 export function ChecksTable({ checks, banks, clients, providers }: ChecksTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editCheck, setEditCheck] = useState<MockCheck | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isFullYear, setIsFullYear] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [typeFilter, setTypeFilter] = useState<"ALL" | "RECIBIDO" | "EMITIDO">("ALL");
+  const [selectedEntity, setSelectedEntity] = useState("all");
 
   const effectiveMonth = `${selectedYear}-${selectedMonth.slice(5)}`;
+
+  const entityNames = useMemo(
+    () =>
+      [...new Set([...clients, ...providers].map((entity) => entity.name))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "es-AR")),
+    [clients, providers]
+  );
 
   const filtered = useMemo(
     () =>
       checks.filter((c) => {
-        const matchMonth = c.issueDate.startsWith(effectiveMonth);
+        const matchPeriod = isFullYear ? c.issueDate.startsWith(`${selectedYear}-`) : c.issueDate.startsWith(effectiveMonth);
         const matchType = typeFilter === "ALL" || c.type === typeFilter;
-        return matchMonth && matchType;
+        const matchEntity = selectedEntity === "all" || c.relatedEntity === selectedEntity;
+        return matchPeriod && matchType && matchEntity;
       }),
-    [checks, effectiveMonth, typeFilter]
+    [checks, isFullYear, selectedYear, effectiveMonth, typeFilter, selectedEntity]
   );
 
   const totalRecibidos = useMemo(
@@ -84,37 +89,18 @@ export function ChecksTable({ checks, banks, clients, providers }: ChecksTablePr
     });
   };
 
-  const handleMonthNav = (direction: "prev" | "next") => {
-    const newMonth = direction === "prev" ? prevMonth(effectiveMonth) : nextMonth(effectiveMonth);
-    setSelectedMonth(newMonth);
-    setSelectedYear(parseInt(newMonth.slice(0, 4)));
-  };
-
   return (
     <div className="space-y-4">
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={selectedYear}
-          onChange={(e) => {
-            const y = parseInt(e.target.value);
-            setSelectedYear(y);
-            setSelectedMonth(`${y}-${selectedMonth.slice(5)}`);
-          }}
-          className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
-
-        <div className="flex items-center gap-1 rounded-md border bg-card px-1 py-1.5">
-          <button onClick={() => handleMonthNav("prev")} className="rounded px-1 hover:bg-muted">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="min-w-[110px] text-center text-sm font-medium">{monthLabel(effectiveMonth)}</span>
-          <button onClick={() => handleMonthNav("next")} className="rounded px-1 hover:bg-muted">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+        <PeriodFilter
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          isFullYear={isFullYear}
+          onYearChange={setSelectedYear}
+          onMonthChange={setSelectedMonth}
+          onFullYearChange={setIsFullYear}
+        />
 
         <div className="flex rounded-md border bg-card">
           {(["ALL", "RECIBIDO", "EMITIDO"] as const).map((t) => (
@@ -129,6 +115,19 @@ export function ChecksTable({ checks, banks, clients, providers }: ChecksTablePr
             </button>
           ))}
         </div>
+
+        <select
+          value={selectedEntity}
+          onChange={(e) => setSelectedEntity(e.target.value)}
+          className="rounded-md border bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="all">Todas las entidades</option>
+          {entityNames.map((entity) => (
+            <option key={entity} value={entity}>
+              {entity}
+            </option>
+          ))}
+        </select>
       </div>
 
       {filtered.length === 0 ? (
